@@ -1,0 +1,4 @@
+*.env
+\quizzer
+\test_data
+\__pycache__
