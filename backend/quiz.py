@@ -5,6 +5,7 @@ import requests
 import time
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any
 from kaggle.api.kaggle_api_extended import KaggleApi
 from bs4 import BeautifulSoup
@@ -76,6 +77,8 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(CORSMiddleware, allow_origins=["*"])
 
 @app.get("/datasets")
 async def search_datasets(query: str = ""):

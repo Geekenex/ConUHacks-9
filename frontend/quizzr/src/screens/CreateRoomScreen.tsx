@@ -9,72 +9,6 @@ type Dataset = {
   download_url: string
 }
 
-const dummyDatasets: Dataset[] = [
-  {
-    title: "Netflix Movies and TV Shows",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/434238/824878/30c0ef57882454a0419a348088aa2306/dataset-card.jpg?t=2019-12-04-06-00-44",
-    download_url:
-      "https://www.kaggle.com/datasets/shivamb/netflix-shows/download/netflix_titles.csv",
-  },
-  {
-    title: "Netflix Movies and TV Shows",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/4769773/8081202/818c41acd81442d98e99dc5badc12d76/dataset-card.jpg?t=2024-04-10-10-06-16",
-    download_url:
-      "https://www.kaggle.com/datasets/rahulvyasm/netflix-movies-and-tv-shows/download/netflix_titles.csv",
-  },
-  {
-    title: "Netflix Movies and TV Shows",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/6417893/10362470/3d1aafbbfbf12c038cd9e5fa97f07d61/dataset-card.jpeg?t=2025-01-03-10-41-54",
-    download_url:
-      "https://www.kaggle.com/datasets/anandshaw2001/netflix-movies-and-tv-shows/download/netflix_titles.csv",
-  },
-  {
-    title: "Netflix Movies and TV Shows",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/4538199/7760004/9679d193322ae994d4e6ed643f6a817e/dataset-card.jpeg?t=2024-03-04-15-50-50",
-    download_url:
-      "https://www.kaggle.com/datasets/arnavvvvv/netflix-movies-and-tv-shows/download/netflix_titles.csv",
-  },
-  {
-    title: "Netflix Movies and TV Shows",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/6147571/9989172/8db7e861a9bd702df507ef8089291255/dataset-card.png?t=2024-11-23-08-10-53",
-    download_url:
-      "https://www.kaggle.com/datasets/zafarali27/netflix-movies-and-tv-shows/download/Netflix_Movies_and_TV_Shows.csv",
-  },
-  {
-    title: "Latest Netflix TV shows and movies",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/2812514/4852010/9436b3a380293e2d520714545be94a87/dataset-card.jpg?t=2023-01-14-17-27-12",
-    download_url:
-      "https://www.kaggle.com/datasets/senapatirajesh/netflix-tv-shows-and-movies/download/NetFlix.csv",
-  },
-  {
-    title: "Netflix Movies and Shows",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/4026921/7004629/4d30a09d38e6dfe3feaa31920a680108/dataset-card.jpg?t=2023-11-19-18-39-24",
-    download_url:
-      "https://www.kaggle.com/datasets/maso0dahmed/netflix-movies-and-shows/download/imdb_movies_shows.csv",
-  },
-  {
-    title: "Netflix Movies and TV Shows 2021 ",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/1474883/2437311/73a72898a5265702b913ff227b8a0204/dataset-card.png?t=2021-07-18-11-18-08",
-    download_url:
-      "https://www.kaggle.com/datasets/satpreetmakhija/netflix-movies-and-tv-shows-2021/download/netflixData.csv",
-  },
-  {
-    title: "Netflix Chronicles: Exploring Movies and TV Shows ",
-    thumbnail:
-      "https://storage.googleapis.com/kaggle-datasets-images/4807456/8133228/1c1d9ca8d681952f626eee1299c7636e/dataset-card.png?t=2024-04-16-07-41-34",
-    download_url:
-      "https://www.kaggle.com/datasets/nayanack/netflix/download/netflix.csv",
-  },
-]
-
 export default function CreateRoomScreen() {
   const [numPlayers, setNumPlayers] = useState(2)
   const [datasetQuery, setDatasetQuery] = useState('')
@@ -87,13 +21,20 @@ export default function CreateRoomScreen() {
     console.log('Selected dataset:', selectedDataset)
   }
 
-  const handleSearchDatasets = () => {
-    //TODO: replace w real backend api call
-    const results = dummyDatasets.filter((ds) =>
-      ds.title.toLowerCase().includes(datasetQuery.toLowerCase())
-    )
-    setSearchResults(results)
-    setModalOpen(true)
+  const handleSearchDatasets = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/datasets?query=${encodeURIComponent(datasetQuery)}`
+      )
+      if (!response.ok) {
+        throw new Error('Network response was not ok')
+      }
+      const results: Dataset[] = await response.json()
+      setSearchResults(results)
+      setModalOpen(true)
+    } catch (error) {
+      console.error('Error fetching datasets:', error)
+    }
   }
 
   const handleDatasetSelect = (dataset: Dataset) => {
@@ -108,14 +49,14 @@ export default function CreateRoomScreen() {
       <div className="form-buttons-container">
         <div className="form-section">
           <label>Number of questions: {numPlayers}</label>
-            <input
-              type="range"
-              className="questions-slider"
-              min="2"
-              max="10"
-              value={numPlayers}
-              onChange={(e) => setNumPlayers(Number(e.target.value))}
-            />
+          <input
+            type="range"
+            className="questions-slider"
+            min="2"
+            max="10"
+            value={numPlayers}
+            onChange={(e) => setNumPlayers(Number(e.target.value))}
+          />
 
           {selectedDataset ? (
             <div className="selected-dataset">
