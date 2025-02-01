@@ -32,6 +32,8 @@ export default function GameScreen() {
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [user] = useState<string>('user' + Math.floor(Math.random() * 1000))
 
+  const TIME_LIMIT = 18;
+  
   useEffect(() => {
     if (!roomCode) return
     const socket = new WebSocket(`ws://localhost:8000/ws/${roomCode}`)
@@ -46,7 +48,7 @@ export default function GameScreen() {
         setSessionStarted(true)
       } else if (msg.type === 'question') {
         setQuestionData(msg.data)
-        setTimeLeft(msg.data.timeLimit)
+        setTimeLeft(TIME_LIMIT)
         setHasAnswered(false)
         setCurrentQuestionScore(null)
       } else if (msg.type === 'result') {
@@ -69,14 +71,22 @@ export default function GameScreen() {
   }, [roomCode, user])
 
   useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (sessionStarted && questionData && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft(prev => (prev > 0 ? prev - 1 : 0))
-      }, 1000)
+    if (sessionStarted && questionData) {
+      setTimeLeft(TIME_LIMIT);
+      const timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
     }
-    return () => clearInterval(timer)
-  }, [sessionStarted, questionData, timeLeft])
+  }, [sessionStarted, questionData]);
+  
+  
 
   const sendAnswer = (answer: string) => {
     if (ws && connected && !hasAnswered) {
@@ -106,15 +116,14 @@ export default function GameScreen() {
             <p>Trivia Game</p>
           </header>
           <div className="timer-bar">
-            <div
-              className="time-progress"
-              style={{
-                width: questionData
-                  ? `${(timeLeft / questionData.timeLimit) * 100}%`
-                  : '0%',
-              }}
-            ></div>
-          </div>
+          <div
+            className="time-progress"
+            style={{
+              width: `${(timeLeft / (questionData?.timeLimit || TIME_LIMIT)) * 100}%`,
+            }}
+          ></div>
+        </div>
+
           <div className="question-section">
             <h2 className="question-text">
               {questionData ? questionData.question : 'Waiting for question...'}
