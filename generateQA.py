@@ -6,9 +6,40 @@ from dotenv import load_dotenv
 import os
 import csv 
 import json
+import tiktoken
+import chardet
+
 
 load_dotenv() 
 open_ai_api=os.getenv("OPENAI_API_KEY")
+
+def detect_encoding(file_path: str) -> str:
+    with open(file_path, 'rb') as f:
+        raw_data = f.read()
+    result = chardet.detect(raw_data)
+    return result['encoding']
+
+def read_csv_to_string(file_path: str) -> str:
+    lines = []
+    encoding = detect_encoding(file_path=file_path)
+    with open(file_path, 'r', encoding=encoding) as csv_file:
+        reader = csv.reader(csv_file)
+        for row in reader:
+            line = ','.join(row)
+            lines.append(line)
+    
+    csv_string = '\n'.join(lines)
+    return csv_string
+def trim_csv_to_token_limit(csv_string: str, max_tokens: int, model: str = "gpt-4o-mini") -> str:
+    encoding = tiktoken.encoding_for_model(model)
+    tokens = encoding.encode(csv_string)
+    
+    if len(tokens) > max_tokens:
+        trimmed_tokens = tokens[:max_tokens]
+        trimmed_string = encoding.decode(trimmed_tokens)
+        return trimmed_string
+    return csv_string
+
 def parseCSV(csv_content: str):
     csv_lines = csv_content.strip().splitlines()
     reader = csv.reader(csv_lines)
@@ -19,7 +50,7 @@ def parseCSV(csv_content: str):
     for row in rows:
         combined_data.append(", ".join(row))
     csv_context = "\n".join(combined_data)
-    return csv_content
+    return csv_context
 
 
 def callModel(csv_content, num_questions):
@@ -34,7 +65,18 @@ def callModel(csv_content, num_questions):
             f"{csv_content}\n\n"
             f"Based on this data, create {num_questions} quiz questions. "
             "Each question must have exactly 1 correct answer and 3 plausible but incorrect answers. "
-            "Return your response strictly as valid JSON in the following format (an array of objects):\n\n"
+            "The questions should be general knowledge based questions about the theme of the data"
+            "Do not ask specific questions about specific rows or data entries"
+            "Make the questions interesting and thought provoking"
+            "Half questions should be medium difficulty, quarter should be hard, one quarter should be extremely difficult"
+            "Translate all data to english if written in another language"
+            "Always include context, inform the user on all information they should know regarding the question such as require location and time in the form of city and year"
+            "If there is temporal data such as dates inform the user on the year month range"
+            "Make sure that all fake answers are plausible alternatives within the same domain as the correct answer and within the scope of the dataset provided"
+            "For fake answers choose answers that are very close to the real answer, for example if the real answer is a city or location choose as fake answers locations that are geographically close to the correct city"
+            "To form a fake answer relate it to the correct answer"
+            "If the correct answer is a number, the fake answer should be numbers numerically close to it"
+            "Return your response strictly as valid JSON in the following format (an array of objects) do not use code blocks and output as a machine readable json format without markdown:\n\n"
             "[\n"
             "  {\n"
             '    "question": "string",\n'
@@ -60,7 +102,8 @@ def callModel(csv_content, num_questions):
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[system_prompt, user_prompt],
-        temperature=0.7,
+        temperature=0.9,  
+        top_p=0.95,
         max_tokens=1500
     )
     raw_content = completion.choices[0].message.content.strip()
@@ -86,7 +129,3 @@ def generateQA(csv, num_questions):
     result = callModel(content, num_questions)
     print(result)
     return result
-
-test_string = "ID,Name,Age,Email,Country,Score 1,John Doe,28,john.doe@example.com,USA,85 2,Jane Smith,34,jane.smith@example.com,Canada,90 3,Bob Johnson,45,bob.johnson@example.com,UK,75 4,Alice Brown,29,alice.brown@example.com,Australia,88 5,Charlie Davis,38,charlie.davis@example.com,Germany,92"
-num_questions = 3
-generateQA(test_string, num_questions)
