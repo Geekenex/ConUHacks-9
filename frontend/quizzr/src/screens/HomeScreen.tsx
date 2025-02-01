@@ -15,6 +15,7 @@ export default function HomeScreen() {
 
   return (
     <div>
+    <p className="app-title">QuizzR</p>
       <div className="section">
         <h2>Join a room</h2>
         <CustomInput

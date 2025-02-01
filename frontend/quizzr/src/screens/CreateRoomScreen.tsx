@@ -18,6 +18,7 @@ export default function CreateRoomScreen() {
 
   return (
     <div className="section">
+        <p className="app-title">QuizzR</p>
         <h2>Create a room</h2>
         <label>Number of players: {numPlayers}</label>
         <input

@@ -8,7 +8,6 @@ export default function App() {
   return (
     <Router>
       <div className="app">
-        <p className="app-title">Quizzr</p>
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/create" element={<CreateRoomScreen />} />
