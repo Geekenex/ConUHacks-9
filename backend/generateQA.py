@@ -1,6 +1,3 @@
-#Read CSV
-#Output QA dict
-
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -13,23 +10,6 @@ import chardet
 load_dotenv() 
 open_ai_api=os.getenv("OPENAI_API_KEY")
 
-def detect_encoding(file_path: str) -> str:
-    with open(file_path, 'rb') as f:
-        raw_data = f.read()
-    result = chardet.detect(raw_data)
-    return result['encoding']
-
-def read_csv_to_string(file_path: str) -> str:
-    lines = []
-    encoding = detect_encoding(file_path=file_path)
-    with open(file_path, 'r', encoding=encoding) as csv_file:
-        reader = csv.reader(csv_file)
-        for row in reader:
-            line = ','.join(row)
-            lines.append(line)
-    
-    csv_string = '\n'.join(lines)
-    return csv_string
 def trim_csv_to_token_limit(csv_string: str, max_tokens: int, model: str = "gpt-4o-mini") -> str:
     encoding = tiktoken.encoding_for_model(model)
     tokens = encoding.encode(csv_string)
@@ -126,6 +106,6 @@ def callModel(csv_content, num_questions):
 def generateQA(csv, num_questions):
     result = {}
     content = parseCSV(csv)
+    content = trim_csv_to_token_limit(content, 125500)
     result = callModel(content, num_questions)
-    print(result)
     return result
