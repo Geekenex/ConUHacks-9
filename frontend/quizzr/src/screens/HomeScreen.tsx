@@ -10,6 +10,7 @@ export default function HomeScreen() {
 
   const handleJoinRoom = () => {
     console.log('Joining room:', roomCode)
+    navigate(`/game/${roomCode}`)
   }
 
   return (

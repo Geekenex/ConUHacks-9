@@ -7,9 +7,11 @@ button {
     font-family: 'Sono', sans-serif;
     font-size: 1rem;
     cursor: pointer;
-  }
-  
-  button:hover {
-    background-color: #e29636;
-  }
+    transition: 0.1s;
+}
+
+button:hover {
+  background-color: #f19728;
+  transform: scale(1.012);
+}
   

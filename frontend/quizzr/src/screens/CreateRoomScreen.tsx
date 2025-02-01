@@ -18,19 +18,22 @@ export default function CreateRoomScreen() {
 
   return (
     <div className="section">
-      <h2>Create a room</h2>
-      <label>Number of players: {numPlayers}</label>
-      <input
-        type="range"
-        min="2"
-        max="10"
-        value={numPlayers}
-        onChange={(e) => setNumPlayers(Number(e.target.value))}
-      />
-      <div style={{ margin: '1rem 0' }}>
-        <CustomInput type="file" accept=".csv" onChange={handleCSVUpload} />
-      </div>
-      <CustomButton onClick={handleCreateRoom}>Create Room</CustomButton>
+        <h2>Create a room</h2>
+        <label>Number of players: {numPlayers}</label>
+        <input
+          type="range"
+          min="2"
+          max="10"
+          value={numPlayers}
+          onChange={(e) => setNumPlayers(Number(e.target.value))}
+        />
+        <div style={{ margin: '1rem 0' }}>
+          <CustomInput type="file" accept=".csv" onChange={handleCSVUpload} />
+        </div>
+        <div className="buttonContainer">
+          <CustomButton onClick={handleCreateRoom}>Create Room</CustomButton>
+          <CustomButton onClick={() => window.history.back()}>Back</CustomButton>
+        </div>
     </div>
   )
 }

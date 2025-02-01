@@ -3,13 +3,19 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-  }
+}
   
-  .section {
-    margin-bottom: 2rem;
-  }
-  
-  .csv-upload {
-    margin: 1rem 0;
-  }
+.section {
+  margin-bottom: 2rem;
+}
+
+.csv-upload {
+  margin: 1rem 0;
+}
+
+.buttonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
   
