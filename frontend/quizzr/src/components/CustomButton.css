@@ -1,0 +1,15 @@
+button {
+    background-color: #d88d2a;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.8rem 1.2rem;
+    font-family: 'Sono', sans-serif;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #e29636;
+  }
+  
