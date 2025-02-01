@@ -1,15 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Sono:wght@400;700&display=swap');
 
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
 html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -19,32 +13,29 @@ body {
   font-family: 'Sono', sans-serif;
 }
 
+#root {
+  width: 100%;
+  height: 100%;
+}
+
 .app {
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   padding-top: 2rem;
+  box-sizing: border-box;
 }
 
 .app-title {
   font-size: 6rem;
-  margin-bottom: 2rem;
-  margin-top: 0;
-}
-
-.section {
-  margin-bottom: 2rem;
+  margin: 0 0 2rem;
 }
 
 @media (max-width: 600px) {
   .app-title {
     font-size: 3rem;
-  }
-
-  .section h2 {
-    font-size: 1.4rem;
   }
 }

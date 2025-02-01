@@ -1,0 +1,15 @@
+.create-room-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .section {
+    margin-bottom: 2rem;
+  }
+  
+  .csv-upload {
+    margin: 1rem 0;
+  }
+  
