@@ -30,17 +30,16 @@ export default function GameScreen() {
   const [totalScore, setTotalScore] = useState<number>(0)
   const [scoreboard, setScoreboard] = useState<Scoreboard>({})
   const [timeLeft, setTimeLeft] = useState<number>(0)
-  const [user] = useState<string>('user' + Math.floor(Math.random() * 1000))
+  const [username, setUsername] = useState<string>("")
+  const [usernameSubmitted, setUsernameSubmitted] = useState<boolean>(false)
+  const TIME_LIMIT = 18
 
-  const TIME_LIMIT = 18;
-  
   useEffect(() => {
-    if (!roomCode) return
+    if (!roomCode || !username) return
     const socket = new WebSocket(`ws://localhost:8000/ws/${roomCode}`)
     socket.onopen = () => {
       setConnected(true)
-      // Join the room using the provided room code and user
-      socket.send(JSON.stringify({ action: 'join', user }))
+      socket.send(JSON.stringify({ action: 'join', user: username }))
     }
     socket.onmessage = (event: MessageEvent) => {
       const msg: MessageData = JSON.parse(event.data)
@@ -68,39 +67,61 @@ export default function GameScreen() {
     socket.onclose = () => setConnected(false)
     setWs(socket)
     return () => socket.close()
-  }, [roomCode, user])
+  }, [roomCode, username])
 
   useEffect(() => {
     if (sessionStarted && questionData) {
-      setTimeLeft(TIME_LIMIT);
+      setTimeLeft(TIME_LIMIT)
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
+            clearInterval(timer)
+            return 0
           }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
+          return prev - 1
+        })
+      }, 1000)
+      return () => clearInterval(timer)
     }
-  }, [sessionStarted, questionData]);
-  
-  
+  }, [sessionStarted, questionData])
 
   const sendAnswer = (answer: string) => {
     if (ws && connected && !hasAnswered) {
-      ws.send(JSON.stringify({ action: 'answer', user, answer }))
+      ws.send(JSON.stringify({ action: 'answer', user: username, answer }))
     }
   }
 
   const startSession = () => {
     if (ws && connected && !sessionStarted) {
-      ws.send(JSON.stringify({ action: 'start', user }))
+      ws.send(JSON.stringify({ action: 'start', user: username }))
     }
   }
 
   const sortedScoreboard = Object.entries(scoreboard).sort((a, b) => b[1] - a[1])
+
+  if (!usernameSubmitted) {
+    return (
+      <div className="game-screen">
+        <p className="app-game-title">QuizzR</p>
+        <div className="trivia-container">
+          <h2>Enter your username</h2>
+          <input
+            type="text"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            placeholder="Username"
+          />
+          <CustomButton onClick={() => {
+            if(username.trim() !== "") {
+              setUsernameSubmitted(true)
+            }
+          }}>
+            Submit
+          </CustomButton>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="game-screen">
@@ -116,14 +137,13 @@ export default function GameScreen() {
             <p>Trivia Game</p>
           </header>
           <div className="timer-bar">
-          <div
-            className="time-progress"
-            style={{
-              width: `${(timeLeft / (questionData?.timeLimit || TIME_LIMIT)) * 100}%`,
-            }}
-          ></div>
-        </div>
-
+            <div
+              className="time-progress"
+              style={{
+                width: `${(timeLeft / (questionData?.timeLimit || TIME_LIMIT)) * 100}%`
+              }}
+            ></div>
+          </div>
           <div className="question-section">
             <h2 className="question-text">
               {questionData ? questionData.question : 'Waiting for question...'}
@@ -144,16 +164,15 @@ export default function GameScreen() {
           <div style={{ marginTop: '20px' }}>
             <h3>Scoreboard</h3>
             <ul>
-              {sortedScoreboard.map(([username, score]) => (
-                <li key={username}>
-                  {username}: {score}
+              {sortedScoreboard.map(([uname, score]) => (
+                <li key={uname}>
+                  {uname}: {score}
                 </li>
               ))}
             </ul>
           </div>
           <div style={{ marginTop: '20px' }}>
-            <strong>Your User:</strong> {user} | <strong>Total Score:</strong>{' '}
-            {totalScore}
+            <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
           </div>
           {currentQuestionScore !== null && (
             <div style={{ marginTop: '10px' }}>

@@ -87,7 +87,7 @@ async def search_datasets(query: str = ""):
     if query:
         datasets = api.dataset_list(search=query, page=1, max_size=10_000_000, file_type='csv')
     else:
-        datasets = api.dataset_list(sort_by='hottest', page=1, max_size=10_000_000, file_type='csv')
+        datasets = api.dataset_list(sort_by='votes', page=1, max_size=10_000_000, file_type='csv')
     results = []
     for ds in datasets:
         dataset_url = f"https://www.kaggle.com/datasets/{ds.ref}"
@@ -176,15 +176,23 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
             data = await websocket.receive_json()
             action = data.get("action")
             session = sessions.get(session_code)
-            if action == "start":
+            if action == "join":
+                user = data.get("user")
+                if user:
+                    if user not in session["responses"]:
+                        session["responses"][user] = 0
+                    scoreboard_payload = json.dumps({
+                        "type": "scoreboard",
+                        "data": session["responses"]
+                    })
+                    await manager.broadcast(session_code, scoreboard_payload)
+            elif action == "start":
                 if not session.get("started"):
                     session["started"] = True
-                    # Notify all clients that session has started
                     await manager.broadcast(session_code, json.dumps({
                         "type": "session_started",
                         "data": {}
                     }))
-                    # Immediately send a question
                     session["current_question_answers"] = {}
                     question = random.choice(session["questions"])
                     session["current_question"] = question
@@ -233,3 +241,4 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
                     await manager.broadcast(session_code, scoreboard_payload)
     except WebSocketDisconnect:
         manager.disconnect(session_code, websocket)
+
