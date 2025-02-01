@@ -3,6 +3,7 @@ import './App.css'
 import HomeScreen from './screens/HomeScreen'
 import CreateRoomScreen from './screens/CreateRoomScreen'
 import GameScreen from './screens/GameScreen'
+import Example from './Example'
 
 export default function App() {
   return (
@@ -15,5 +16,6 @@ export default function App() {
         </Routes>
       </div>
     </Router>
+    // <Example />
   )
 }

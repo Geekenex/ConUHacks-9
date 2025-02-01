@@ -1,141 +1,158 @@
-// GameScreen.tsx
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import CustomButton from '../components/CustomButton'
 import './GameScreen.css'
 
-type Player = {
-  id: number
-  name: string
-  isHost: boolean
-}
-
-type Room = {
-  roomCode: string
-  players: Player[]
-  csvFileName: string
-}
-
-type Question = {
+interface QuestionData {
   question: string
-  answers: string[]
+  options: string[]
   timeLimit: number
 }
 
-const dummyRoom: Room = {
-  roomCode: 'ABC123',
-  csvFileName: 'players.csv',
-  players: [
-    { id: 1, name: 'Alice', isHost: true },
-    { id: 2, name: 'Bob', isHost: false },
-    { id: 3, name: 'Charlie', isHost: false },
-  ],
+interface Scoreboard {
+  [user: string]: number
 }
 
-const dummyQuestion: Question = {
-  question: "What is the capital of France?",
-  answers: ["Paris", "London", "Berlin", "Madrid"],
-  timeLimit: 15,
+interface MessageData {
+  type: string
+  data?: any
+  message?: string
 }
 
 export default function GameScreen() {
-  const [roomData, setRoomData] = useState<Room>(dummyRoom)
-  const [gameStarted, setGameStarted] = useState(false)
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
-  const [questionData, setQuestionData] = useState<Question>(dummyQuestion)
-  const [timeLeft, setTimeLeft] = useState(dummyQuestion.timeLimit)
-  const navigate = useNavigate()
+  const { roomCode } = useParams<{ roomCode: string }>()
+  const [ws, setWs] = useState<WebSocket | null>(null)
+  const [connected, setConnected] = useState<boolean>(false)
+  const [sessionStarted, setSessionStarted] = useState<boolean>(false)
+  const [questionData, setQuestionData] = useState<QuestionData | null>(null)
+  const [hasAnswered, setHasAnswered] = useState<boolean>(false)
+  const [currentQuestionScore, setCurrentQuestionScore] = useState<number | null>(null)
+  const [totalScore, setTotalScore] = useState<number>(0)
+  const [scoreboard, setScoreboard] = useState<Scoreboard>({})
+  const [timeLeft, setTimeLeft] = useState<number>(0)
+  const [user] = useState<string>('user' + Math.floor(Math.random() * 1000))
 
   useEffect(() => {
-    // TODO: fetch room data from backend
-    setRoomData(dummyRoom)
-  }, [])
+    if (!roomCode) return
+    const socket = new WebSocket(`ws://localhost:8000/ws/${roomCode}`)
+    socket.onopen = () => {
+      setConnected(true)
+      // Join the room using the provided room code and user
+      socket.send(JSON.stringify({ action: 'join', user }))
+    }
+    socket.onmessage = (event: MessageEvent) => {
+      const msg: MessageData = JSON.parse(event.data)
+      if (msg.type === 'session_started') {
+        setSessionStarted(true)
+      } else if (msg.type === 'question') {
+        setQuestionData(msg.data)
+        setTimeLeft(msg.data.timeLimit)
+        setHasAnswered(false)
+        setCurrentQuestionScore(null)
+      } else if (msg.type === 'result') {
+        if (msg.data) {
+          setCurrentQuestionScore(msg.data.result)
+          setTotalScore(msg.data.total)
+          setHasAnswered(true)
+        }
+      } else if (msg.type === 'scoreboard') {
+        if (msg.data) {
+          setScoreboard(msg.data)
+        }
+      } else if (msg.type === 'error') {
+        console.error(msg.message)
+      }
+    }
+    socket.onclose = () => setConnected(false)
+    setWs(socket)
+    return () => socket.close()
+  }, [roomCode, user])
 
   useEffect(() => {
-    if (gameStarted) {
-      // TODO: open WebSocket connection to receive trivia questions
-      const timer = setInterval(() => {
+    let timer: NodeJS.Timeout
+    if (sessionStarted && questionData && timeLeft > 0) {
+      timer = setInterval(() => {
         setTimeLeft(prev => (prev > 0 ? prev - 1 : 0))
       }, 1000)
-      return () => clearInterval(timer)
     }
-  }, [gameStarted])
+    return () => clearInterval(timer)
+  }, [sessionStarted, questionData, timeLeft])
 
-  const handleLeaveRoom = () => {
-    console.log('Deleting room:', roomData.roomCode)
-    // TODO: send delete room request to backend
-    navigate('/')
+  const sendAnswer = (answer: string) => {
+    if (ws && connected && !hasAnswered) {
+      ws.send(JSON.stringify({ action: 'answer', user, answer }))
+    }
   }
 
-  const handleStartGame = () => {
-    console.log('Starting game in room:', roomData.roomCode)
-    // TODO: open WebSocket connection to server here
-    setGameStarted(true)
-    setTimeLeft(dummyQuestion.timeLimit) // reset timer for new question
+  const startSession = () => {
+    if (ws && connected && !sessionStarted) {
+      ws.send(JSON.stringify({ action: 'start', user }))
+    }
   }
 
-  const handleAnswerClick = (index: number) => {
-    setSelectedAnswer(index)
-    console.log("Selected answer:", questionData.answers[index])
-    // TODO: send selected answer to server via WebSocket
-  }
+  const sortedScoreboard = Object.entries(scoreboard).sort((a, b) => b[1] - a[1])
 
   return (
-    <>
+    <div className="game-screen">
       <p className="app-game-title">QuizzR</p>
-      <div className="game-screen">
-        {gameStarted ? (
-          <div className="trivia-container">
-            <header className="app-header">
-              <p>Trivia Game</p>
-            </header>
-            <div className="timer-bar">
-              <div
-                className="time-progress"
-                style={{ width: `${(timeLeft / questionData.timeLimit) * 100}%` }}
-              ></div>
-            </div>
-            <div className="question-section">
-              <h2 className="question-text">{questionData.question}</h2>
-            </div>
-            <div className="answers-section">
-              {questionData.answers.map((answer, index) => (
+      {!sessionStarted ? (
+        <div className="trivia-container">
+          <h2>Waiting for session to start...</h2>
+          <CustomButton onClick={startSession}>Everybody's In</CustomButton>
+        </div>
+      ) : (
+        <div className="trivia-container">
+          <header className="app-header">
+            <p>Trivia Game</p>
+          </header>
+          <div className="timer-bar">
+            <div
+              className="time-progress"
+              style={{
+                width: questionData
+                  ? `${(timeLeft / questionData.timeLimit) * 100}%`
+                  : '0%',
+              }}
+            ></div>
+          </div>
+          <div className="question-section">
+            <h2 className="question-text">
+              {questionData ? questionData.question : 'Waiting for question...'}
+            </h2>
+          </div>
+          <div className="answers-section">
+            {questionData &&
+              questionData.options.map((opt, index) => (
                 <div
                   key={index}
-                  className={`answer-card ${selectedAnswer === index ? 'selected' : ''}`}
-                  onClick={() => handleAnswerClick(index)}
+                  className={`answer-card ${hasAnswered ? '' : ''}`}
+                  onClick={() => sendAnswer(opt)}
                 >
-                  {answer}
+                  {opt}
                 </div>
               ))}
-            </div>
           </div>
-        ) : (
-          <>
-            <div className="header">
-              <h2>Room {roomData.roomCode}</h2>
-              <p className="csv-file">CSV File: {roomData.csvFileName}</p>
+          <div style={{ marginTop: '20px' }}>
+            <h3>Scoreboard</h3>
+            <ul>
+              {sortedScoreboard.map(([username, score]) => (
+                <li key={username}>
+                  {username}: {score}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div style={{ marginTop: '20px' }}>
+            <strong>Your User:</strong> {user} | <strong>Total Score:</strong>{' '}
+            {totalScore}
+          </div>
+          {currentQuestionScore !== null && (
+            <div style={{ marginTop: '10px' }}>
+              <strong>Current Question Score:</strong> {currentQuestionScore}
             </div>
-            <div className="content">
-              <div className="controls">
-                {roomData.players.find((player) => player.isHost) && (
-                  <CustomButton onClick={handleStartGame}>Start Game</CustomButton>
-                )}
-                <CustomButton onClick={handleLeaveRoom}>Delete Room</CustomButton>
-              </div>
-              <div className="player-box">
-                <ul className="player-list">
-                  {roomData.players.map((player) => (
-                    <li key={player.id}>
-                      {player.name} {player.isHost ? '(Host)' : ''}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </>
+          )}
+        </div>
+      )}
+    </div>
   )
 }

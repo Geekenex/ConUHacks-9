@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"],  allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/datasets")
 async def search_datasets(query: str = ""):
@@ -123,6 +123,7 @@ async def search_datasets(query: str = ""):
 async def start_session(request: Request):
     data = await request.json()
     dataset_url = data.get("dataset_url")
+    questions_num = data.get("questions_num")
     if not dataset_url or not isinstance(dataset_url, str):
         raise HTTPException(status_code=400, detail="dataset_url must be a non-empty string")
     # Extract dataset reference from dataset_url (e.g., "https://www.kaggle.com/datasets/shivamb/netflix-shows" -> "shivamb/netflix-shows")
@@ -152,7 +153,7 @@ async def start_session(request: Request):
                     csv_content = f.read()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to download dataset via Kaggle API: {str(e)}")
-    questions = generateQA(csv_content, 10)
+    questions = generateQA(csv_content, questions_num)
     session_code = generate_session_code()
     sessions[session_code] = {
         "questions": questions,

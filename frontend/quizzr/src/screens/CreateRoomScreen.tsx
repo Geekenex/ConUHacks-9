@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import CustomButton from '../components/CustomButton'
 import CustomInput from '../components/CustomInput'
 import './CreateRoomScreen.css'
@@ -10,15 +11,33 @@ type Dataset = {
 }
 
 export default function CreateRoomScreen() {
-  const [numPlayers, setNumPlayers] = useState(2)
+  const [numQuestions, setnumQuestions] = useState(2)
   const [datasetQuery, setDatasetQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [searchResults, setSearchResults] = useState<Dataset[]>([])
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
+  const navigate = useNavigate()
+  const user = 'user' + Math.floor(Math.random() * 1000)
 
-  const handleCreateRoom = () => {
-    console.log('Creating room with up to', numPlayers, 'players')
-    console.log('Selected dataset:', selectedDataset)
+  const handleCreateRoom = async () => {
+    if (!selectedDataset) return
+    try {
+      const response = await fetch('http://localhost:8000/start_session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dataset_url: selectedDataset.download_url,
+          questions_num: numQuestions,
+        }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to start session')
+      }
+      const data = await response.json()
+      navigate(`/game/${data.session_code}`)
+    } catch (error) {
+      console.error('Error starting session:', error)
+    }
   }
 
   const handleSearchDatasets = async () => {
@@ -48,14 +67,14 @@ export default function CreateRoomScreen() {
       <h2>Create a room</h2>
       <div className="form-buttons-container">
         <div className="form-section">
-          <label>Number of questions: {numPlayers}</label>
+          <label>Number of questions: {numQuestions}</label>
           <input
             type="range"
             className="questions-slider"
             min="2"
             max="10"
-            value={numPlayers}
-            onChange={(e) => setNumPlayers(Number(e.target.value))}
+            value={numQuestions}
+            onChange={(e) => setnumQuestions(Number(e.target.value))}
           />
 
           {selectedDataset ? (
