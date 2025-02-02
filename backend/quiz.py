@@ -70,7 +70,15 @@ async def run_session(session_code: str):
             }
         })
         await manager.broadcast(session_code, payload)
-        await asyncio.sleep(20)
+        await asyncio.sleep(15)
+        await manager.broadcast(session_code, json.dumps({
+            "type": "question_result",
+            "data": {
+                "correct_answer": question["correct_answer"],
+                "scores": session["current_question_answers"]
+            }
+        }))
+        await asyncio.sleep(5)
     # All questions have been asked; notify clients that the game is over.
     payload = json.dumps({
         "type": "game_over",
