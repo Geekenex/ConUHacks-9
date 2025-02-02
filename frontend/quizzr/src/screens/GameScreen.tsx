@@ -35,6 +35,7 @@ export default function GameScreen() {
   const [gameOver, setGameOver] = useState<boolean>(false)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [questionResult, setQuestionResult] = useState<number | null>(null)
+  const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
 
   const TIME_LIMIT = 20
   const ANSWER_PHASE = 15
@@ -71,9 +72,14 @@ export default function GameScreen() {
         }
       } else if (msg.type === 'game_over') {
         setGameOver(true)
-      } else if (msg.type === 'error') {
-        console.error(msg.message)
       }
+      else if (msg.type === 'question_result') {
+        setCorrectAnswer(msg.data.correct_answer)
+      } 
+      else if (msg.type === 'error') {
+        console.error(msg.message)
+      } 
+      
     }
     
     socket.onclose = () => setConnected(false)
@@ -190,30 +196,36 @@ export default function GameScreen() {
                 <h2 className="question-text">{questionData.question}</h2>
               </div>
               <div className="answers-section">
-                {questionData.options.map((opt, index) => {
-                  let cardClass = "answer-card"
-                  if (selectedAnswer === opt) {
-                    if (hasAnswered && revealPhase) {
-                      cardClass += (questionResult !== null && questionResult > 0) ? " correct" : " wrong"
-                    } else {
-                      cardClass += " selected"
-                    }
+              {questionData.options.map((opt, index) => {
+                let cardClass = 'answer-card'
+              
+                if (revealPhase) {
+                  if (opt === correctAnswer) {
+                    cardClass += ' correct' // correct = green
+                  } else if (selectedAnswer === opt) {
+                    cardClass += ' wrong'  // wrong = red
                   }
-                  return (
-                    <div
-                      key={index}
-                      className={cardClass}
-                      onClick={() => {
-                        if (!hasAnswered && !revealPhase) {
-                          sendAnswer(opt)
-                        }
-                      }}
-                    >
-                      {opt}
-                    </div>
-                  )
-                })}
-              </div>
+                } else {
+                  if (selectedAnswer === opt) {
+                    cardClass += ' selected'
+                  }
+                }
+              
+                return (
+                  <div
+                    key={index}
+                    className={cardClass}
+                    onClick={() => {
+                      if (!hasAnswered && !revealPhase) {
+                        sendAnswer(opt)
+                      }
+                    }}
+                  >
+                    {opt}
+                  </div>
+                )
+              })}
+            </div>
               {timeLeft <= (TIME_LIMIT - ANSWER_PHASE) && (
                 <Leaderboard scoreboard={scoreboard} />
               )}
