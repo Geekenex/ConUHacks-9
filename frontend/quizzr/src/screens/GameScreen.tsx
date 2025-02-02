@@ -28,7 +28,6 @@ export default function GameScreen() {
   const [quizReady, setQuizReady] = useState<boolean>(false)
   const [questionData, setQuestionData] = useState<QuestionData | null>(null)
   const [hasAnswered, setHasAnswered] = useState<boolean>(false)
-  const [totalScore, setTotalScore] = useState<number>(0)
   const [scoreboard, setScoreboard] = useState<Scoreboard>({})
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [username, setUsername] = useState<string>("")
@@ -87,7 +86,6 @@ export default function GameScreen() {
         setCorrectAnswer(null)
       } else if (msg.type === 'result') {
         if (msg.data) {
-          setTotalScore(msg.data.total)
           setHasAnswered(true)
         }
       } else if (msg.type === 'scoreboard') {
