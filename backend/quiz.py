@@ -92,25 +92,38 @@ async def run_session(session_code: str):
         await asyncio.sleep(15)
 
         # At the 15-second mark, check if the image is ready.
+        # At the 15-second mark, check if the image is ready.
         if image_task.done():
-            # If the image is ready, broadcast it immediately.
-            base64_png = image_task.result()
-            image_payload = json.dumps({
-                "type": "generated_image",
-                "data": {"base64": base64_png}
-            })
-            await manager.broadcast(session_code, image_payload)
-        else:
-            # If not ready, add a callback so that when it finishes, the image gets sent.
-            def on_image_done(task: asyncio.Task):
-                base64_png = task.result()
+            # If the image is ready, attempt to retrieve it.
+            try:
+                base64_png = image_task.result()
+            except Exception as e:
+                print(f"Image generation error: {e}")
+                base64_png = None
+            # Broadcast only if we got a valid image.
+            if base64_png:
                 image_payload = json.dumps({
                     "type": "generated_image",
                     "data": {"base64": base64_png}
                 })
-                # Schedule broadcasting the image without awaiting it here.
-                asyncio.create_task(manager.broadcast(session_code, image_payload))
+                await manager.broadcast(session_code, image_payload)
+        else:
+            # If not ready, add a callback so that when it finishes, 
+            # we try to retrieve it without crashing.
+            def on_image_done(task: asyncio.Task):
+                try:
+                    base64_png = task.result()
+                    if base64_png:
+                        image_payload = json.dumps({
+                            "type": "generated_image",
+                            "data": {"base64": base64_png}
+                        })
+                        # Schedule broadcasting the image (no await needed here).
+                        asyncio.create_task(manager.broadcast(session_code, image_payload))
+                except Exception as e:
+                    print(f"Image generation error in callback: {e}")
             image_task.add_done_callback(on_image_done)
+        
 
         # Now broadcast the question result.
         await manager.broadcast(session_code, json.dumps({
@@ -120,7 +133,7 @@ async def run_session(session_code: str):
                 "scores": session["current_question_answers"]
             }
         }))
-        await asyncio.sleep(10)
+        await asyncio.sleep(20)
     # All questions have been asked; notify clients that the game is over.
     payload = json.dumps({
         "type": "game_over",
