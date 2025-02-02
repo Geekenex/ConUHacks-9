@@ -36,14 +36,11 @@ export default function GameScreen() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [questionResult, setQuestionResult] = useState<number | null>(null)
 
-
   const TIME_LIMIT = 20
   const ANSWER_PHASE = 15
 
-  const revealPhase = timeLeft <= (TIME_LIMIT - ANSWER_PHASE);
-
-  const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0);
-
+  const revealPhase = timeLeft <= (TIME_LIMIT - ANSWER_PHASE)
+  const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0)
 
   useEffect(() => {
     if (!roomCode || !username) return
@@ -58,7 +55,7 @@ export default function GameScreen() {
         setSessionStarted(true)
       } else if (msg.type === 'question') {
         setQuestionData(msg.data)
-        setTimeLeft(msg.data.timeLimit || TIME_LIMIT)
+        setTimeLeft(TIME_LIMIT)
         setHasAnswered(false)
         setSelectedAnswer(null)
         setQuestionResult(null)
@@ -79,7 +76,6 @@ export default function GameScreen() {
       }
     }
     
-    
     socket.onclose = () => setConnected(false)
     setWs(socket)
     return () => socket.close()
@@ -87,7 +83,7 @@ export default function GameScreen() {
 
   useEffect(() => {
     if (sessionStarted && questionData && !gameOver) {
-      setTimeLeft(questionData.timeLimit || TIME_LIMIT)
+      setTimeLeft(TIME_LIMIT)
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -134,17 +130,14 @@ export default function GameScreen() {
               }
             }}
           >
-          <CustomButton onClick={() => {
-            if (username.trim() !== "") {
-              setUsernameSubmitted(true)
-            }
-          }}>
             Submit
           </CustomButton>
         </div>
       </div>
     )
   }
+
+  const sortedScoreboard = Object.entries(scoreboard).sort(([, a], [, b]) => b - a)
 
   if (gameOver) {
     return (
@@ -197,34 +190,30 @@ export default function GameScreen() {
                 <h2 className="question-text">{questionData.question}</h2>
               </div>
               <div className="answers-section">
-                {questionData &&
-                  questionData.options.map((opt, index) => {
-                    let cardClass = "answer-card"
-                    if (selectedAnswer === opt) {
-                      if (hasAnswered && revealPhase) {
-                        cardClass += (questionResult !== null && questionResult > 0) ? " correct" : " wrong"
-                      } else {
-                        cardClass += " selected"
-                      }
+                {questionData.options.map((opt, index) => {
+                  let cardClass = "answer-card"
+                  if (selectedAnswer === opt) {
+                    if (hasAnswered && revealPhase) {
+                      cardClass += (questionResult !== null && questionResult > 0) ? " correct" : " wrong"
+                    } else {
+                      cardClass += " selected"
                     }
-                    return (
-                      <div
-                        key={index}
-                        className={cardClass}
-                        onClick={() => {
-                          if (!hasAnswered && !revealPhase) {
-                            sendAnswer(opt)
-                          }
-                        }}
-                      >
-                        {opt}
-                      </div>
-                    )
-                  })}
+                  }
+                  return (
+                    <div
+                      key={index}
+                      className={cardClass}
+                      onClick={() => {
+                        if (!hasAnswered && !revealPhase) {
+                          sendAnswer(opt)
+                        }
+                      }}
+                    >
+                      {opt}
+                    </div>
+                  )
+                })}
               </div>
-
-
-
               {timeLeft <= (TIME_LIMIT - ANSWER_PHASE) && (
                 <Leaderboard scoreboard={scoreboard} />
               )}
