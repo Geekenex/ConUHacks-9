@@ -196,16 +196,22 @@ export default function GameScreen() {
           <h2>Game Over</h2>
           <div className="scoreboard-container">
             <h3>Final Scoreboard</h3>
-            <ul>
-              {sortedScoreboard.map(([uname, score]) => (
-                <li key={uname}>
-                  {uname}: {score}
-                </li>
-              ))}
-            </ul>
+            <div className="podium-container">
+            {sortedScoreboard.slice(0, 3).map(([uname, score], index) => (
+              <div key={uname} className={`podium podium-${index + 1}`}>
+                <p className="podium-rank">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</p>
+                <p className="podium-user">{uname} {uname === username ? "(YOU)" : ""}</p>
+                <p className="podium-score">{score} pts</p>
+              </div>
+            ))}
           </div>
-          <div className="user-score">
-            <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
+          <ul>
+            {sortedScoreboard.slice(3).map(([uname, score]) => (
+              <li key={uname}>
+                {uname} {uname === username ? "(YOU)" : ""}: {score}
+              </li>
+            ))}
+          </ul>
           </div>
         </div>
       ) : (
