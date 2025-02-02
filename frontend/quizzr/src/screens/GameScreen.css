@@ -158,6 +158,22 @@
   border-color: darkred;
 }
 
+.generated-image-container {
+  max-height: 25%;
+  width: 100%;
+  margin-bottom: 1em;
+  border: 2px solid #ccc; /* This creates a frame effect */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* Ensures the image does not overflow the frame */
+}
+
+.generated-image {
+  max-height: 100%;
+  width: auto;
+  object-fit: contain;
+}
 .scoreboard-container {
   margin-top: 1.5rem;
   text-align: center;
@@ -258,5 +274,39 @@
   .trivia-container {
     max-width: 900px;
   }
+}
+
+
+.explanation-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* center content horizontally */
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.explanation-label {
+  text-align: center;
+  font-size: 1.2em;
+  margin: 0 0 0.5em 0; /* no extra top margin, small bottom margin */
+  font-weight: bold;
+}
+
+.generated-image-container {
+  max-height: 25vh; /* use viewport height units rather than % */
+  width: 100%;
+  border: 2px solid #ccc; /* frame effect */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  margin-bottom: 1em;
+}
+
+.generated-image {
+  max-height: 100%;
+  width: auto;
+  object-fit: contain;
 }
 
