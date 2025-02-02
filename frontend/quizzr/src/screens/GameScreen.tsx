@@ -25,6 +25,7 @@ export default function GameScreen() {
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState<boolean>(false)
   const [sessionStarted, setSessionStarted] = useState<boolean>(false)
+  const [quizReady, setQuizReady] = useState<boolean>(false)
   const [questionData, setQuestionData] = useState<QuestionData | null>(null)
   const [hasAnswered, setHasAnswered] = useState<boolean>(false)
   const [totalScore, setTotalScore] = useState<number>(0)
@@ -37,6 +38,7 @@ export default function GameScreen() {
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [userList, setUserList] = useState<string[]>([])
   const [showLeaderboardPopup, setShowLeaderboardPopup] = useState<boolean>(false)
+  const [joinError, setJoinError] = useState<string>("")
   const [errorMessage, setErrorMessage] = useState<string | null>(null) 
 
 
@@ -46,7 +48,6 @@ export default function GameScreen() {
   const revealPhase = timeLeft <= (TIME_LIMIT - ANSWER_PHASE)
   const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0)
 
-  //Delay the scoreboard popup by 1s
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
     if (revealPhase) {
@@ -57,7 +58,6 @@ export default function GameScreen() {
     return () => clearTimeout(timer)
   }, [revealPhase])
   
-
   useEffect(() => {
     if (!roomCode || !username) return
     const socket = new WebSocket(`${window.location.href.includes("localhost")?"ws://localhost:8000":"wss://conuhacks-9.up.railway.app"}/ws/${roomCode}`)
@@ -73,6 +73,19 @@ export default function GameScreen() {
         setUsername("")
         return
       }
+      else if (msg.type === 'join_success') {
+        setUsernameSubmitted(true)
+        setJoinError("")
+      } else if (msg.type === 'quiz_ready') {
+        setQuizReady(true)
+      } else if (msg.type === 'error') {
+        if (msg.message === "Username already taken") {
+          setJoinError(msg.message)
+        } else {
+          console.error(msg.message)
+        }
+      }
+
       else if (msg.type === 'session_started') {
         setSessionStarted(true)
       } else if (msg.type === 'question') {
@@ -98,8 +111,6 @@ export default function GameScreen() {
         if (msg.data) {
           setUserList(msg.data)
         }
-      } else if (msg.type === 'error') {
-        console.error(msg.message)
       }
 
     }
@@ -129,7 +140,6 @@ export default function GameScreen() {
     if (input.value) {
       setErrorMessage(null)
       setUsername(input.value)
-      setUsernameSubmitted(true)
     }
   }
 
@@ -165,10 +175,12 @@ export default function GameScreen() {
           />
           {errorMessage && <p className="error-message">{errorMessage}</p>} 
           <CustomButton onClick={handleUsernameSubmit}>Submit</CustomButton>
+          {joinError && <div className="error-message shake">{joinError}</div>}
         </div>
       ) : !sessionStarted ? (
         <div className="trivia-container">
           <h2>Waiting for session to start...</h2>
+          {!quizReady && <p>Creating quiz...</p>}
           {userList.length > 0 && (
             <div className="user-list">
               <p>Users in Lobby</p>
@@ -179,7 +191,7 @@ export default function GameScreen() {
               </ul>
             </div>
           )}
-          <CustomButton onClick={startSession}>Everybody's In</CustomButton>
+          {quizReady && <CustomButton onClick={startSession}>Everybody's In</CustomButton>}
         </div>
       ) : gameOver ? (
         <div className="trivia-container">

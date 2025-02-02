@@ -160,39 +160,19 @@ async def start_session(request: Request):
     data = await request.json()
     dataset_url = data.get("dataset_url")
     questions_num = data.get("questions_num")
-    print(questions_num)
     if not dataset_url or not isinstance(dataset_url, str):
         raise HTTPException(status_code=400, detail="dataset_url must be a non-empty string")
-    # Extract dataset reference from dataset_url (e.g., "https://www.kaggle.com/datasets/shivamb/netflix-shows" -> "shivamb/netflix-shows")
     parts = dataset_url.rstrip("/").split("/")
     if "datasets" in parts:
         idx = parts.index("datasets")
         ds_ref = "/".join(parts[idx+1: idx+3])
     else:
         raise HTTPException(status_code=400, detail="Invalid dataset_url format")
-    try:
-        from kaggle.api.kaggle_api_extended import KaggleApi
-        import tempfile, glob, os
-        api = KaggleApi()
-        api.authenticate()
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            api.dataset_download_files(ds_ref, path=tmpdirname, unzip=True)
-            csv_files = glob.glob(os.path.join(tmpdirname, "*.csv"))
-            if not csv_files:
-                raise Exception("No CSV file found in dataset")
-            csv_file = csv_files[0]
-            try:
-                with open(csv_file, "r", encoding="utf-8-sig") as f:
-                    csv_content = f.read()
-            except UnicodeDecodeError:
-                with open(csv_file, "r", encoding="latin-1") as f:
-                    csv_content = f.read()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to download dataset via Kaggle API: {str(e)}")
-    questions = generateQA(csv_content, questions_num)
+    # Create session immediately
     session_code = generate_session_code()
     sessions[session_code] = {
-        "questions": questions,
+        "questions": None,
+        "quiz_ready": False,
         "current_question": None,
         "current_question_timestamp": None,
         "responses": {},
@@ -200,9 +180,42 @@ async def start_session(request: Request):
         "started": False,
         "users": []
     }
+    # Offload blocking quiz generation to a thread
+    asyncio.create_task(generate_quiz_background(session_code, ds_ref, questions_num))
     return {"session_code": session_code}
 
-# In the websocket endpoint, update the "join" action as follows:
+
+async def generate_quiz_background(session_code: str, ds_ref: str, questions_num: int):
+    try:
+        def blocking_task():
+            from kaggle.api.kaggle_api_extended import KaggleApi
+            import tempfile, glob, os
+            api = KaggleApi()
+            api.authenticate()
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                api.dataset_download_files(ds_ref, path=tmpdirname, unzip=True)
+                csv_files = glob.glob(os.path.join(tmpdirname, "*.csv"))
+                if not csv_files:
+                    raise Exception("No CSV file found in dataset")
+                csv_file = csv_files[0]
+                try:
+                    with open(csv_file, "r", encoding="utf-8-sig") as f:
+                        csv_content = f.read()
+                except UnicodeDecodeError:
+                    with open(csv_file, "r", encoding="latin-1") as f:
+                        csv_content = f.read()
+            # This call is assumed to be CPU-bound
+            questions = generateQA(csv_content, questions_num)
+            return questions
+
+        questions = await asyncio.to_thread(blocking_task)
+        sessions[session_code]["questions"] = questions
+        sessions[session_code]["quiz_ready"] = True
+        await manager.broadcast(session_code, json.dumps({"type": "quiz_ready"}))
+    except Exception as e:
+        print(e)
+
+
 @app.websocket("/ws/{session_code}")
 async def websocket_endpoint(websocket: WebSocket, session_code: str):
     profanity.load_censor_words()
@@ -228,14 +241,18 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
                 if user:
                     if "users" not in session:
                         session["users"] = []
-                    if user not in session["users"]:
+                    if user in session["users"]:
+                        await websocket.send_json({"type": "error", "message": "Username already taken"})
+                    else:
                         session["users"].append(user)
-
-                    user_list_payload = json.dumps({
-                        "type": "user_list",
-                        "data": session["users"]
-                    })
-                    await manager.broadcast(session_code, user_list_payload)
+                        await websocket.send_json({"type": "join_success"})
+                        if session.get("quiz_ready"):
+                            await websocket.send_json({"type": "quiz_ready"})
+                        user_list_payload = json.dumps({
+                            "type": "user_list",
+                            "data": session["users"]
+                        })
+                        await manager.broadcast(session_code, user_list_payload)
             elif action == "start":
                 if not session.get("started"):
                     session["started"] = True
@@ -278,4 +295,3 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
                     await manager.broadcast(session_code, scoreboard_payload)
     except WebSocketDisconnect:
         manager.disconnect(session_code, websocket)
-
