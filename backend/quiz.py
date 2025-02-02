@@ -12,6 +12,15 @@ from bs4 import BeautifulSoup
 from contextlib import asynccontextmanager
 from generateQA import generateQA
 from better_profanity import profanity
+import generateVisuals
+
+def generate_base64_png(csv_content: str, question: str, answer: str) -> str:
+    # Placeholder implementation:
+    # This function should process the CSV content, question, and answer
+    # then return a base64-encoded PNG string.
+    return "data:image/png;base64,"+ generateVisuals.generate_base64_png(csv_content, question, answer)
+
+
 
 # In-memory session storage:
 # sessions[session_code] = {
@@ -20,7 +29,9 @@ from better_profanity import profanity
 #   "current_question_timestamp": float,
 #   "responses": { user: total_score },
 #   "current_question_answers": { user: question_score },
-#   "started": boolean
+#   "csv_content": str,      # <-- added to store CSV data for use with generate_base64_png
+#   "started": boolean,
+#   "users": List[str]
 # }
 sessions: Dict[str, Dict[str, Any]] = {}
 
@@ -50,7 +61,6 @@ manager = ConnectionManager()
 def generate_session_code(length: int = 6) -> str:
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
-# Add this new function to handle per-session scheduling:
 async def run_session(session_code: str):
     session = sessions[session_code]
     # Shuffle questions so each is asked exactly once
@@ -71,7 +81,38 @@ async def run_session(session_code: str):
             }
         })
         await manager.broadcast(session_code, payload)
+
+        # Start generating the image in the background immediately.
+        csv_content = session.get("csv_content", "")
+        image_task = asyncio.create_task(
+            asyncio.to_thread(generate_base64_png, csv_content, question["question"], question["correct_answer"])
+        )
+
+        # Wait for 15 seconds for players to answer.
         await asyncio.sleep(15)
+
+        # At the 15-second mark, check if the image is ready.
+        if image_task.done():
+            # If the image is ready, broadcast it immediately.
+            base64_png = image_task.result()
+            image_payload = json.dumps({
+                "type": "generated_image",
+                "data": {"base64": base64_png}
+            })
+            await manager.broadcast(session_code, image_payload)
+        else:
+            # If not ready, add a callback so that when it finishes, the image gets sent.
+            def on_image_done(task: asyncio.Task):
+                base64_png = task.result()
+                image_payload = json.dumps({
+                    "type": "generated_image",
+                    "data": {"base64": base64_png}
+                })
+                # Schedule broadcasting the image without awaiting it here.
+                asyncio.create_task(manager.broadcast(session_code, image_payload))
+            image_task.add_done_callback(on_image_done)
+
+        # Now broadcast the question result.
         await manager.broadcast(session_code, json.dumps({
             "type": "question_result",
             "data": {
@@ -79,7 +120,7 @@ async def run_session(session_code: str):
                 "scores": session["current_question_answers"]
             }
         }))
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
     # All questions have been asked; notify clients that the game is over.
     payload = json.dumps({
         "type": "game_over",
@@ -87,32 +128,9 @@ async def run_session(session_code: str):
     })
     await manager.broadcast(session_code, payload)
 
-async def question_scheduler():
-    while True:
-        await asyncio.sleep(20)
-        for session_code, session in sessions.items():
-            if session.get("started") and session.get("questions") and session_code in manager.active_connections:
-                # Clear current answers and send a new question
-                session["current_question_answers"] = {}
-                question = random.choice(session["questions"])
-                session["current_question"] = question
-                session["current_question_timestamp"] = time.time()
-                options = question["fake_answers"] + [question["correct_answer"]]
-                random.shuffle(options)
-                payload = json.dumps({
-                    "type": "question",
-                    "data": {
-                        "question": question["question"],
-                        "options": options
-
-                    }
-                })
-                await manager.broadcast(session_code, payload)
-
-
 app = FastAPI()
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"],  allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/datasets")
 async def search_datasets(query: str = ""):
@@ -182,7 +200,6 @@ async def start_session(request: Request):
     asyncio.create_task(generate_quiz_background(session_code, ds_ref, questions_num))
     return {"session_code": session_code}
 
-
 async def generate_quiz_background(session_code: str, ds_ref: str, questions_num: int):
     try:
         def blocking_task():
@@ -202,17 +219,17 @@ async def generate_quiz_background(session_code: str, ds_ref: str, questions_num
                 except UnicodeDecodeError:
                     with open(csv_file, "r", encoding="latin-1") as f:
                         csv_content = f.read()
-            # This call is assumed to be CPU-bound
+            # Generate questions (this call is assumed to be CPU-bound)
             questions = generateQA(csv_content, questions_num)
-            return questions
+            return csv_content, questions
 
-        questions = await asyncio.to_thread(blocking_task)
+        csv_content, questions = await asyncio.to_thread(blocking_task)
         sessions[session_code]["questions"] = questions
+        sessions[session_code]["csv_content"] = csv_content  # Store CSV for later use in generate_base64_png
         sessions[session_code]["quiz_ready"] = True
         await manager.broadcast(session_code, json.dumps({"type": "quiz_ready"}))
     except Exception as e:
         print(e)
-
 
 @app.websocket("/ws/{session_code}")
 async def websocket_endpoint(websocket: WebSocket, session_code: str):

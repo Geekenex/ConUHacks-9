@@ -28,7 +28,6 @@ export default function GameScreen() {
   const [quizReady, setQuizReady] = useState<boolean>(false)
   const [questionData, setQuestionData] = useState<QuestionData | null>(null)
   const [hasAnswered, setHasAnswered] = useState<boolean>(false)
-  const [totalScore, setTotalScore] = useState<number>(0)
   const [scoreboard, setScoreboard] = useState<Scoreboard>({})
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [username, setUsername] = useState<string>("")
@@ -37,25 +36,21 @@ export default function GameScreen() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [userList, setUserList] = useState<string[]>([])
-  const [showLeaderboardPopup, setShowLeaderboardPopup] = useState<boolean>(false)
   const [joinError, setJoinError] = useState<string>("")
+  // New state for the generated image (base64 string)
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null)
+  // New state for controlling the display phase:
+  // "answer": waiting for an answer (15 sec)
+  // "leaderboard": show leaderboard for 5 sec
+  // "explanation": show the explanation view (image + answer choices with red/green)
+  const [displayPhase, setDisplayPhase] = useState<"answer" | "leaderboard" | "explanation">("answer")
 
-  const TIME_LIMIT = 20
-  const ANSWER_PHASE = 15
+  const TIME_LIMIT = 20   // total question time (15 sec answer + 5 sec reveal)
+  const ANSWER_PHASE = 15 // time allowed to answer
 
-  const revealPhase = timeLeft <= (TIME_LIMIT - ANSWER_PHASE)
+  // This represents the remaining answer phase time (for the timer bar)
   const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0)
 
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
-    if (revealPhase) {
-      timer = setTimeout(() => setShowLeaderboardPopup(true), 1000)
-    } else {
-      setShowLeaderboardPopup(false)
-    }
-    return () => clearTimeout(timer)
-  }, [revealPhase])
-  
   useEffect(() => {
     if (!roomCode || !username) return
     const socket = new WebSocket(
@@ -81,6 +76,9 @@ export default function GameScreen() {
       } else if (msg.type === 'session_started') {
         setSessionStarted(true)
       } else if (msg.type === 'question') {
+        // New question: reset phase and clear previous states
+        setDisplayPhase("answer")
+        setGeneratedImage(null)
         setQuestionData(msg.data)
         setTimeLeft(TIME_LIMIT)
         setHasAnswered(false)
@@ -88,7 +86,6 @@ export default function GameScreen() {
         setCorrectAnswer(null)
       } else if (msg.type === 'result') {
         if (msg.data) {
-          setTotalScore(msg.data.total)
           setHasAnswered(true)
         }
       } else if (msg.type === 'scoreboard') {
@@ -98,11 +95,20 @@ export default function GameScreen() {
       } else if (msg.type === 'game_over') {
         setGameOver(true)
       } else if (msg.type === 'question_result') {
+        // When the answer phase is over, the server sends the correct answer.
         setCorrectAnswer(msg.data.correct_answer)
+        // First, switch to showing the leaderboard...
+        setDisplayPhase("leaderboard")
+        // ...and after 5 seconds, switch to the explanation view.
+        setTimeout(() => {
+          setDisplayPhase("explanation")
+        }, 5000)
       } else if (msg.type === 'user_list') {
         if (msg.data) {
           setUserList(msg.data)
         }
+      } else if (msg.type === 'generated_image') {
+        setGeneratedImage(msg.data.base64)
       }
     }
     socket.onclose = () => setConnected(false)
@@ -110,8 +116,9 @@ export default function GameScreen() {
     return () => socket.close()
   }, [roomCode, username])
 
+  // Only run the answer-phase timer when in answer phase
   useEffect(() => {
-    if (sessionStarted && questionData && !gameOver) {
+    if (sessionStarted && questionData && !gameOver && displayPhase === "answer") {
       setTimeLeft(TIME_LIMIT)
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
@@ -124,7 +131,7 @@ export default function GameScreen() {
       }, 1000)
       return () => clearInterval(timer)
     }
-  }, [sessionStarted, questionData, gameOver])
+  }, [sessionStarted, questionData, gameOver, displayPhase])
 
   const handleUsernameSubmit = () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement
@@ -187,16 +194,22 @@ export default function GameScreen() {
           <h2>Game Over</h2>
           <div className="scoreboard-container">
             <h3>Final Scoreboard</h3>
-            <ul>
-              {sortedScoreboard.map(([uname, score]) => (
-                <li key={uname}>
-                  {uname}: {score}
-                </li>
-              ))}
-            </ul>
+            <div className="podium-container">
+            {sortedScoreboard.slice(0, 3).map(([uname, score], index) => (
+              <div key={uname} className={`podium podium-${index + 1}`}>
+                <p className="podium-rank">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</p>
+                <p className="podium-user">{uname} {uname === username ? "(YOU)" : ""}</p>
+                <p className="podium-score">{score} pts</p>
+              </div>
+            ))}
           </div>
-          <div className="user-score">
-            <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
+          <ul>
+            {sortedScoreboard.slice(3).map(([uname, score]) => (
+              <li key={uname}>
+                {uname} {uname === username ? "(YOU)" : ""}: {score}
+              </li>
+            ))}
+          </ul>
           </div>
         </div>
       ) : (
@@ -204,51 +217,79 @@ export default function GameScreen() {
           <header className="app-header">
             <p>Trivia Game</p>
           </header>
-          <div className="timer-bar">
-            <div
-              className="time-progress"
-              style={{
-                width: `${(answerTimeLeft / ANSWER_PHASE) * 100}%`,
-              }}
-            ></div>
-          </div>
-          {questionData && (
+
+          {displayPhase === "answer" && (
             <>
-              <div className="question-section">
-                <h2 className="question-text">{questionData.question}</h2>
+              <div className="timer-bar">
+                <div
+                  className="time-progress"
+                  style={{
+                    width: `${(answerTimeLeft / ANSWER_PHASE) * 100}%`,
+                  }}
+                ></div>
               </div>
-              <div className="answers-section">
-                {questionData.options.map((opt, index) => {
-                  let cardClass = 'answer-card'
-                  if (revealPhase) {
+              {questionData && (
+                <>
+                  <div className="question-section">
+                    <h2 className="question-text">{questionData.question}</h2>
+                  </div>
+                  <div className="answers-section">
+                    {questionData.options.map((opt, index) => {
+                      let cardClass = 'answer-card'
+                      if (selectedAnswer === opt) {
+                        cardClass += ' selected'
+                      }
+                      return (
+                        <div
+                          key={index}
+                          className={cardClass}
+                          onClick={() => {
+                            if (!hasAnswered) sendAnswer(opt)
+                          }}
+                        >
+                          {opt}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {displayPhase === "leaderboard" && (
+            // During this phase, show the leaderboard popup
+            <LeaderboardPopup scoreboard={scoreboard} />
+          )}
+
+          {displayPhase === "explanation" && (
+            <>
+              <div className="explanation-section">
+                <div className="explanation-label">Explanation</div>
+                {generatedImage && (
+                  <div className="generated-image-container">
+                    <img src={generatedImage} alt="Visualization" className="generated-image" />
+                  </div>
+                )}
+              </div>
+              {questionData && (
+                <div className="answers-section">
+                  {questionData.options.map((opt, index) => {
+                    let cardClass = 'answer-card'
                     if (opt === correctAnswer) {
                       cardClass += ' correct'
                     } else if (selectedAnswer === opt) {
                       cardClass += ' wrong'
                     }
-                  } else {
-                    if (selectedAnswer === opt) {
-                      cardClass += ' selected'
-                    }
-                  }
-                  return (
-                    <div
-                      key={index}
-                      className={cardClass}
-                      onClick={() => {
-                        if (!hasAnswered && !revealPhase) sendAnswer(opt)
-                      }}
-                    >
-                      {opt}
-                    </div>
-                  )
-                })}
-              </div>
+                    return (
+                      <div key={index} className={cardClass}>
+                        {opt}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </>
-          )}
-
-          {revealPhase && showLeaderboardPopup && (
-            <LeaderboardPopup scoreboard={scoreboard} />
           )}
 
           <div className="user-info">
