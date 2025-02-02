@@ -198,6 +198,31 @@ export default function GameScreen() {
 
   return (
     <div className="game-screen">
+
+      {/* Background Shapes */}
+      <div className="decorative-container">
+        <div className="decorative-shape shape-x" style={{ top: '10%', left: '15%' }}></div>
+        <div className="decorative-shape shape-x" style={{ bottom: '25%', right: '30%' }}></div>
+        <svg
+          className="decorative-shape shape-triangle"
+          style={{ top: '30%', right: '10%' }}
+          viewBox="0 0 40 40"
+        >
+          <polygon points="20,5 35,35 5,35" fill="none" stroke="#3c3c3c" strokeWidth="2" />
+        </svg>
+        <svg
+          className="decorative-shape shape-triangle"
+          style={{ bottom: '40%', left: '20%' }}
+          viewBox="0 0 40 40"
+        >
+          <polygon points="20,5 35,35 5,35" fill="none" stroke="#3c3c3c" strokeWidth="2" />
+        </svg>
+        <div className="decorative-shape shape-square" style={{ bottom: '20%', left: '5%' }}></div>
+        <div className="decorative-shape shape-square" style={{ top: '50%', right: '25%' }}></div>
+        <div className="decorative-shape shape-circle" style={{ bottom: '15%', right: '20%' }}></div>
+        <div className="decorative-shape shape-circle" style={{ top: '20%', left: '50%' }}></div>
+      </div>
+
       {/* Background Music */}
       <audio ref={audioRef} src="/music.mp3" loop />
 
@@ -317,8 +342,12 @@ export default function GameScreen() {
           {displayPhase === "explanation" && (
             <>
               <div className="explanation-section">
-                <div className="explanation-label">Explanation</div>
+                {!generatedImage && (
+                  <div className="explanation-label">Answer</div>
+                )}
                 {generatedImage && (
+                  <>
+                  <div className="explanation-label">Supporting Visual</div>
                   <div className="generated-image-container">
                     {/* Clickable image to open modal */}
                     <img
@@ -330,6 +359,7 @@ export default function GameScreen() {
                       style={{ cursor: 'pointer' }}
                     />
                   </div>
+                  </>
                 )}
               </div>
               {questionData && (

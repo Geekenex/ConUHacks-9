@@ -66,7 +66,7 @@ export default function CreateRoomScreen() {
 
   return (
     <div className="create-room-screen">
-            <div className="decorative-container">
+        <div className="decorative-container">
         <div className="decorative-shape shape-x" style={{ top: '10%', left: '15%' }}></div>
         <div className="decorative-shape shape-x" style={{ bottom: '25%', right: '30%' }}></div>
         <svg
