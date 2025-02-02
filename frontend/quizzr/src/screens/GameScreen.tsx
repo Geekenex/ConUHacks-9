@@ -46,7 +46,7 @@ export default function GameScreen() {
 
   //Delay the scoreboard popup by 1s
   useEffect(() => {
-    let timer: NodeJS.Timeout
+    let timer: ReturnType<typeof setTimeout>
     if (revealPhase) {
       timer = setTimeout(() => setShowLeaderboardPopup(true), 1000)
     } else {
@@ -54,6 +54,7 @@ export default function GameScreen() {
     }
     return () => clearTimeout(timer)
   }, [revealPhase])
+  
 
   useEffect(() => {
     if (!roomCode || !username) return
