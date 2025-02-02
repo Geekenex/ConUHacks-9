@@ -273,7 +273,11 @@ export default function GameScreen() {
                 <div className="explanation-label">Explanation</div>
                 {generatedImage && (
                   <div className="generated-image-container">
-                    <img src={generatedImage} alt="Visualization" className="generated-image" />
+                    <img src={generatedImage}
+                        alt="Visualization"
+                        className="generated-image"
+                        onError={() => setGeneratedImage(null) }
+                        />
                   </div>
                 )}
               </div>
