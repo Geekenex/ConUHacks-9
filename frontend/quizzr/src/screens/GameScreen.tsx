@@ -34,7 +34,6 @@ export default function GameScreen() {
   const [usernameSubmitted, setUsernameSubmitted] = useState<boolean>(false)
   const [gameOver, setGameOver] = useState<boolean>(false)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
-  const [questionResult, setQuestionResult] = useState<number | null>(null)
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
 
   const TIME_LIMIT = 20
@@ -59,10 +58,8 @@ export default function GameScreen() {
         setTimeLeft(TIME_LIMIT)
         setHasAnswered(false)
         setSelectedAnswer(null)
-        setQuestionResult(null)
       } else if (msg.type === 'result') {
         if (msg.data) {
-          setQuestionResult(msg.data.result)
           setTotalScore(msg.data.total)
           setHasAnswered(true)
         }
