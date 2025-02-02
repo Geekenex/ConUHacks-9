@@ -59,6 +59,8 @@ export default function GameScreen() {
 
   const EXPLANATION_PHASE_TIME = 15;
 
+  const isHost = userList.length > 0 && userList[0] === username;
+
   // Connect to the WebSocket
   useEffect(() => {
     if (!roomCode || !username) return
@@ -216,7 +218,6 @@ export default function GameScreen() {
           {joinError && <div className="error-message shake">{joinError}</div>}
         </div>
       ) : !sessionStarted ? (
-        // Lobby Screen
         <div className="trivia-container">
           <h2>Waiting for session to start...</h2>
           {!quizReady && <p>Creating quiz...</p>}
@@ -230,7 +231,10 @@ export default function GameScreen() {
               </ul>
             </div>
           )}
-          {quizReady && <CustomButton onClick={startSession}>Everybody's In</CustomButton>}
+          {/* Only show this button if quizReady is true and the user is the host */}
+          {quizReady && isHost && (
+            <CustomButton onClick={startSession}>Everybody's In</CustomButton>
+          )}
         </div>
       ) : gameOver ? (
         // Game Over Screen
