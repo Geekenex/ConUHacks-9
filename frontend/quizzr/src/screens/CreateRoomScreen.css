@@ -161,6 +161,9 @@
   .dataset-grid .dataset-card:nth-child(9) {
     display: none;
   }
+  .dataset-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
 }
 
 .dataset-card {
