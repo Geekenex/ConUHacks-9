@@ -37,6 +37,8 @@ export default function GameScreen() {
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [userList, setUserList] = useState<string[]>([])
   const [showLeaderboardPopup, setShowLeaderboardPopup] = useState<boolean>(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null) 
+
 
   const TIME_LIMIT = 20
   const ANSWER_PHASE = 15
@@ -65,7 +67,13 @@ export default function GameScreen() {
     }
     socket.onmessage = (event: MessageEvent) => {
       const msg: MessageData = JSON.parse(event.data)
-      if (msg.type === 'session_started') {
+      if (msg.type === 'bad_username'){
+        setErrorMessage(msg.message || "Invalid Username try again.") 
+        setUsernameSubmitted(false) 
+        setUsername("")
+        return
+      }
+      else if (msg.type === 'session_started') {
         setSessionStarted(true)
       } else if (msg.type === 'question') {
         setQuestionData(msg.data)
@@ -93,11 +101,12 @@ export default function GameScreen() {
       } else if (msg.type === 'error') {
         console.error(msg.message)
       }
+
     }
     socket.onclose = () => setConnected(false)
     setWs(socket)
     return () => socket.close()
-  }, [roomCode, username])
+  }, [roomCode, username, usernameSubmitted])
 
   useEffect(() => {
     if (sessionStarted && questionData && !gameOver) {
@@ -118,6 +127,7 @@ export default function GameScreen() {
   const handleUsernameSubmit = () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement
     if (input.value) {
+      setErrorMessage(null)
       setUsername(input.value)
       setUsernameSubmitted(true)
     }
@@ -153,6 +163,7 @@ export default function GameScreen() {
             placeholder="Username"
             maxLength={20}
           />
+          {errorMessage && <p className="error-message">{errorMessage}</p>} 
           <CustomButton onClick={handleUsernameSubmit}>Submit</CustomButton>
         </div>
       ) : !sessionStarted ? (
