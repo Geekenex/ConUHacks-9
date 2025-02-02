@@ -115,12 +115,12 @@ export default function CreateRoomScreen() {
               onChange={(e) => setDatasetQuery(e.target.value)}
             />
             <CustomButton onClick={handleSearchDatasets} disabled={isSearching}>
-              {isSearching ? 'Searching...' : 'Search'}
+              {isSearching ? 'Loading...' : 'Search'}
             </CustomButton>         
              </div>
         )}
         <div className="button-group">
-        <CustomButton onClick={handleCreateRoom}>Creating Room
+        <CustomButton onClick={handleCreateRoom}>Create Room
         </CustomButton>
         <CustomButton onClick={() => window.history.back()}>Back</CustomButton>
         </div>
