@@ -262,7 +262,7 @@ export default function GameScreen() {
             <LeaderboardPopup scoreboard={scoreboard} />
           )}
 
-          <div style={{ marginTop: '20px' }}>
+          <div className="user-info">
             <strong>Your Name:</strong> {username}
           </div>
         </div>
