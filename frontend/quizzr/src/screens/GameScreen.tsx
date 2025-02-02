@@ -58,7 +58,7 @@ export default function GameScreen() {
 
   useEffect(() => {
     if (!roomCode || !username) return
-    const socket = new WebSocket(`wss://${window.location.href.includes("localhost")?"localhost:8000":"conuhacks-9.up.railway.app"}/ws/${roomCode}`)
+    const socket = new WebSocket(`${window.location.href.includes("localhost")?"ws://localhost:8000":"wss://conuhacks-9.up.railway.app"}/ws/${roomCode}`)
     socket.onopen = () => {
       setConnected(true)
       socket.send(JSON.stringify({ action: 'join', user: username }))
