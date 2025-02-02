@@ -57,6 +57,8 @@ export default function GameScreen() {
   const ANSWER_PHASE = 15
   const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0)
 
+  const EXPLANATION_PHASE_TIME = 15;
+
   // Connect to the WebSocket
   useEffect(() => {
     if (!roomCode || !username) return
@@ -111,10 +113,10 @@ export default function GameScreen() {
         // Show Explanation first, then Leaderboard
         setCorrectAnswer(msg.data.correct_answer)
         setDisplayPhase("explanation")
-        // After 5 seconds, switch to the leaderboard
+        // After 15 seconds, switch to the leaderboard
         setTimeout(() => {
           setDisplayPhase("leaderboard")
-        }, 15000)
+        }, EXPLANATION_PHASE_TIME * 1000)
       } else if (msg.type === 'user_list') {
         if (msg.data) {
           setUserList(msg.data)
@@ -264,10 +266,6 @@ export default function GameScreen() {
       ) : (
         // Game in progress
         <div className="trivia-container">
-          <header className="app-header">
-            <p>Trivia Game</p>
-          </header>
-
           {/* ANSWER PHASE */}
           {displayPhase === "answer" && (
             <>

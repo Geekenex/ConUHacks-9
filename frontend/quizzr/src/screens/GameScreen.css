@@ -37,6 +37,8 @@
   background-color: #1e1e1e;
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .username-input {
@@ -174,6 +176,7 @@
   width: auto;
   object-fit: contain;
 }
+
 .scoreboard-container {
   margin-top: 1.5rem;
   text-align: center;
@@ -181,7 +184,6 @@
   overflow-y: auto;
   padding-right: 10px;
 }
-
 
 .scoreboard-container ul {
   list-style-type: none;
@@ -250,7 +252,6 @@
   font-size: 1rem;
 }
 
-
 @media (min-width: 768px) {
   .trivia-container {
     max-width: 800px;
@@ -276,7 +277,6 @@
   }
 }
 
-
 .explanation-section {
   display: flex;
   flex-direction: column;
@@ -289,28 +289,11 @@
 .explanation-label {
   text-align: center;
   font-size: 1.2em;
-  margin: 0 0 0.5em 0; 
+  margin: 0 0 0.5em 0;
   font-weight: bold;
 }
 
-.generated-image-container {
-  max-height: 25vh;
-  width: 100%;
-  border: 2px solid #ccc;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  margin-bottom: 1em;
-}
-
-.generated-image {
-  max-height: 100%;
-  width: auto;
-  object-fit: contain;
-}
-
-
+/* Fullscreen Image Modal */
 .image-modal {
   position: fixed;
   top: 0;
@@ -353,4 +336,22 @@
   color: #fff;
   font-size: 2rem;
   cursor: pointer;
+}
+
+
+@media (max-width: 480px) {
+  .explanation-section {
+    padding: 1rem;
+  }
+
+  .generated-image-container {
+    max-height: 40vh;
+  }
+
+  .generated-image {
+    max-width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+  }
 }
