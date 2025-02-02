@@ -60,7 +60,9 @@ export default function GameScreen() {
   
   useEffect(() => {
     if (!roomCode || !username) return
-    const socket = new WebSocket(`${window.location.href.includes("localhost")?"ws://localhost:8000":"wss://conuhacks-9.up.railway.app"}/ws/${roomCode}`)
+    const socket = new WebSocket(
+      `${window.location.href.includes("localhost") ? "ws://localhost:8000" : "wss://conuhacks-9.up.railway.app"}/ws/${roomCode}`
+    )
     socket.onopen = () => {
       setConnected(true)
       socket.send(JSON.stringify({ action: 'join', user: username }))
@@ -196,7 +198,7 @@ export default function GameScreen() {
       ) : gameOver ? (
         <div className="trivia-container">
           <h2>Game Over</h2>
-          <div style={{ marginTop: '20px' }}>
+          <div className="scoreboard-container">
             <h3>Final Scoreboard</h3>
             <ul>
               {sortedScoreboard.map(([uname, score]) => (
@@ -206,7 +208,7 @@ export default function GameScreen() {
               ))}
             </ul>
           </div>
-          <div style={{ marginTop: '20px' }}>
+          <div className="user-score">
             <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
           </div>
         </div>
