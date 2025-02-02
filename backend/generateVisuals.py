@@ -35,7 +35,7 @@ def generate_base64_png(csv_content: str, question: str, answer: str) -> str:
             "You can assume that the CSV data is well-formatted and contains the necessary information to generate the visual representation."
             "Part of your responsibility is to ensure the generated visualization is clear, informative, and visually appealing. In that regard, you can choose the type of visualization that best suits the data and question, but to avoid clutter, limit the number of data points to the top 5-10 relevant entries, depending on scenario. Data points should almost always be labeled. For example, in a bar chart, each bar should be labeled with the corresponding numerical value."
             "The style for the visualization should be in black background with no gridlines, white labels. the visual itself should be tints of asthetically pleasing yellowish-redish tints."
-            "Your code should be run in a try catch block. If the data is not suitable for any visualization or an error occurs in the code's execution, it should return the base64-encoded PNG image of the text 'Data not suitable for visualization'."
+            "Your code should be run in a try catch block. If the data is not suitable for any visualization or an error occurs in the code's execution, it should return the base64-encoded black background PNG image with the white text 'Data not suitable for visualization'."
             "Examples of unsuitable visuals would be a column chart with one column, a pie chart with only one slice, or a scatter plot with only one point."
         )
     }

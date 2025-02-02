@@ -290,10 +290,10 @@ export default function GameScreen() {
                 </li>
               ))}
             </ul>
-          </div>
           <CustomButton style={{ fontSize: '1.5rem', marginTop: '1rem' }} onClick={() => navigate('/')}>
             Exit
           </CustomButton>
+          </div>
         </div>
       ) : (
         // Game in progress
