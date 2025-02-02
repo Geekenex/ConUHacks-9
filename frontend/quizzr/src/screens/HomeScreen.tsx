@@ -13,7 +13,7 @@ export default function HomeScreen() {
 
   const testRoomExists = (): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(`ws://localhost:8000/ws/${roomCode}`)
+      const ws = new WebSocket(`${window.location.href.includes("localhost")?"ws://localhost:8000":"wss://conuhacks-9.up.railway.app"}/ws/${roomCode}`)
 
       ws.onopen = () => {
         ws.close()
