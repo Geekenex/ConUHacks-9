@@ -73,6 +73,11 @@
   
 }
 
+.dataset-card img {
+  height: 10vh;
+  object-fit: cover;
+}
+
 .search-container input {
   flex: 1;
   padding: 0.75rem;
