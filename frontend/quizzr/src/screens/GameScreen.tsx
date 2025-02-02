@@ -102,6 +102,14 @@ export default function GameScreen() {
     }
   }, [sessionStarted, questionData, gameOver])
 
+  const handleUsernameSubmit = () => {
+    const input = document.querySelector('input[type="text"]') as HTMLInputElement
+    if (input.value) {
+      setUsername(input.value)
+      setUsernameSubmitted(true)
+    }
+  }
+
   const sendAnswer = (answer: string) => {
     if (ws && connected && !hasAnswered && timeLeft > (TIME_LIMIT - ANSWER_PHASE)) {
       setSelectedAnswer(answer)
@@ -126,15 +134,9 @@ export default function GameScreen() {
           <h2>Enter your username</h2>
           <input
             type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
             placeholder="Username"
           />
-          <CustomButton onClick={() => {
-            if(username.trim() !== "") {
-              setUsernameSubmitted(true)
-            }
-          }}>
+          <CustomButton onClick={handleUsernameSubmit}>
             Submit
           </CustomButton>
         </div>
