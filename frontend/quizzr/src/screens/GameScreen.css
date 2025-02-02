@@ -12,42 +12,11 @@
   margin: 0.5rem 0;
 }
 
-.header {
+.room-code {
   text-align: center;
-  margin-bottom: 1rem;
-}
-
-.csv-file {
-  margin-top: 0.5rem;
-}
-
-.content {
-  display: flex;
-  width: 100%;
-  max-width: 700px;
-  justify-content: space-between;
-  margin: 0 auto;
-}
-
-.controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  flex: 1;
-}
-
-.player-box {
-  flex: 1;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 2px dotted white;
-  padding: 0.8rem;
-  margin-left: 0.8rem;
-}
-
-.player-list {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
+  font-size: 1.6rem;
+  margin: 1rem 0;
+  color: #d88d2a;
 }
 
 .trivia-container {
@@ -58,6 +27,39 @@
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
+}
+
+.username-input {
+  padding: 0.6rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid #ccc;
+}
+
+.user-list {
+  background-color: #1e1e1e;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+  width: 80%;
+}
+
+.user-list h3 {
+  margin-bottom: 0.5rem;
+}
+
+.user-list ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-list li {
+  margin: 0.3rem 0;
+  background-color: #2a2a2a;
+  padding: 0.4rem;
+  border-radius: 4px;
 }
 
 .app-header {

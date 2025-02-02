@@ -129,12 +129,16 @@ export default function GameScreen() {
   return (
     <div className="game-screen">
       <p className="app-game-title">QuizzR</p>
+      {roomCode && <p className="room-code">Room Code: {roomCode}</p>}
+
       {!usernameSubmitted ? (
         <div className="trivia-container">
           <h2>Enter your username</h2>
           <input
+            className="username-input"
             type="text"
             placeholder="Username"
+            maxLength={20}
           />
           <CustomButton onClick={handleUsernameSubmit}>
             Submit
@@ -145,7 +149,7 @@ export default function GameScreen() {
           <h2>Waiting for session to start...</h2>
           {userList.length > 0 && (
             <div className="user-list">
-              <h3>Users in Lobby:</h3>
+              <p>Users in Lobby</p>
               <ul>
                 {userList.map(user => <li key={user}>{user}</li>)}
               </ul>
