@@ -11,11 +11,11 @@ type Dataset = {
 }
 
 export default function CreateRoomScreen() {
-  const [numQuestions, setnumQuestions] = useState(2)
-  const [datasetQuery, setDatasetQuery] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [searchResults, setSearchResults] = useState<Dataset[]>([])
-  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
+  const [numQuestions, setNumQuestions] = useState(2);
+  const [datasetQuery, setDatasetQuery] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<Dataset[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
   const navigate = useNavigate()
   const user = 'user' + Math.floor(Math.random() * 1000)
 
@@ -62,52 +62,59 @@ export default function CreateRoomScreen() {
   }
 
   return (
-    <div className="section create-room-screen">
-      <p className="app-create-title">QuizzR</p>
-      <h2>Create a room</h2>
-      <div className="form-buttons-container">
-        <div className="form-section">
-          <label>Number of questions: {numQuestions}</label>
+    <div className="create-room-screen">
+            <div className="decorative-container">
+        <div className="decorative-shape shape-x" style={{ top: '10%', left: '15%' }}></div>
+        <div className="decorative-shape shape-x" style={{ bottom: '25%', right: '30%' }}></div>
+        <svg
+          className="decorative-shape shape-triangle"
+          style={{ top: '30%', right: '10%' }}
+          viewBox="0 0 40 40"
+        >
+          <polygon points="20,5 35,35 5,35" fill="none" stroke="#3c3c3c" strokeWidth="2" />
+        </svg>
+        <svg
+          className="decorative-shape shape-triangle"
+          style={{ bottom: '40%', left: '20%' }}
+          viewBox="0 0 40 40"
+        >
+          <polygon points="20,5 35,35 5,35" fill="none" stroke="#3c3c3c" strokeWidth="2" />
+        </svg>
+        <div className="decorative-shape shape-square" style={{ bottom: '20%', left: '5%' }}></div>
+        <div className="decorative-shape shape-square" style={{ top: '50%', right: '25%' }}></div>
+        <div className="decorative-shape shape-circle" style={{ bottom: '15%', right: '20%' }}></div>
+        <div className="decorative-shape shape-circle" style={{ top: '20%', left: '50%' }}></div>
+      </div>
+      <h1 className="app-title">QuizzR</h1>
+      <h2 className="create-room">Create a Room</h2>
+      <div className="form-container">
+        <div className="form-group">
+          <label>Number of Questions: {numQuestions}</label>
           <input
             type="range"
-            className="questions-slider"
             min="2"
             max="10"
             value={numQuestions}
-            onChange={(e) => setnumQuestions(Number(e.target.value))}
+            onChange={(e) => setNumQuestions(Number(e.target.value))}
           />
-
-          {selectedDataset ? (
-            <div className="selected-dataset">
-              <div className="selected-dataset-card">
-                <img
-                  src={selectedDataset.thumbnail}
-                  alt={selectedDataset.title}
-                  className="dataset-thumbnail"
-                />
-                <p className="dataset-title">{selectedDataset.title}</p>
-                <button
-                  className="clear-dataset-btn"
-                  onClick={() => setSelectedDataset(null)}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="dataset-search">
-              <CustomInput
-                placeholder="Enter dataset search query..."
-                value={datasetQuery}
-                onChange={(e) => setDatasetQuery(e.target.value)}
-              />
-              <CustomButton onClick={handleSearchDatasets}>
-                Search Datasets
-              </CustomButton>
-            </div>
-          )}
         </div>
-        <div className="button-container">
+        {selectedDataset ? (
+          <div className="selected-dataset">
+            <img src={selectedDataset.thumbnail} alt={selectedDataset.title} />
+            <p>{selectedDataset.title}</p>
+            <button onClick={() => setSelectedDataset(null)}>×</button>
+          </div>
+        ) : (
+          <div className="search-container">
+            <CustomInput
+              placeholder="Search datasets..."
+              value={datasetQuery}
+              onChange={(e) => setDatasetQuery(e.target.value)}
+            />
+            <CustomButton onClick={handleSearchDatasets}>Search</CustomButton>
+          </div>
+        )}
+        <div className="button-group">
           <CustomButton onClick={handleCreateRoom}>Create Room</CustomButton>
           <CustomButton onClick={() => window.history.back()}>Back</CustomButton>
         </div>
@@ -119,17 +126,9 @@ export default function CreateRoomScreen() {
             <h3>Select a Dataset</h3>
             <div className="dataset-grid">
               {searchResults.map((dataset, index) => (
-                <div
-                  key={index}
-                  className="dataset-card"
-                  onClick={() => handleDatasetSelect(dataset)}
-                >
-                  <img
-                    src={dataset.thumbnail}
-                    alt={dataset.title}
-                    className="dataset-thumbnail"
-                  />
-                  <p className="dataset-title">{dataset.title}</p>
+                <div key={index} className="dataset-card" onClick={() => handleDatasetSelect(dataset)}>
+                  <img src={dataset.thumbnail} alt={dataset.title} />
+                  <p>{dataset.title}</p>
                 </div>
               ))}
             </div>
@@ -137,5 +136,5 @@ export default function CreateRoomScreen() {
         </div>
       )}
     </div>
-  )
+  );
 }
