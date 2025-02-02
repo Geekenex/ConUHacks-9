@@ -225,9 +225,12 @@ export default function GameScreen() {
             <div className="user-list">
               <p>Users in Lobby</p>
               <ul>
-                {userList.map((user) => (
-                  <li key={user}>{user}</li>
-                ))}
+              {userList.map((user, index) => (
+                <li key={user}>
+                  {index === 0 && '👑  '}
+                  {user}
+                </li>
+              ))}
               </ul>
             </div>
           )}
