@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import CustomButton from '../components/CustomButton'
 import LeaderboardPopup from '../components/LeaderboardPopup'
 import './GameScreen.css'
@@ -22,6 +22,7 @@ interface MessageData {
 
 export default function GameScreen() {
   const { roomCode } = useParams<{ roomCode: string }>()
+  const navigate = useNavigate()
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState<boolean>(false)
   const [sessionStarted, setSessionStarted] = useState<boolean>(false)
@@ -37,19 +38,15 @@ export default function GameScreen() {
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [userList, setUserList] = useState<string[]>([])
   const [joinError, setJoinError] = useState<string>("")
-  // New state for the generated image (base64 string)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
-  // New state for controlling the display phase:
-  // "answer": waiting for an answer (15 sec)
-  // "leaderboard": show leaderboard for 5 sec
-  // "explanation": show the explanation view (image + answer choices with red/green)
   const [displayPhase, setDisplayPhase] = useState<"answer" | "leaderboard" | "explanation">("answer")
 
-  const TIME_LIMIT = 20   // total question time (15 sec answer + 5 sec reveal)
-  const ANSWER_PHASE = 15 // time allowed to answer
-
-  // This represents the remaining answer phase time (for the timer bar)
+  const TIME_LIMIT = 20
+  const ANSWER_PHASE = 15
   const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0)
+
+  // Music ref
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (!roomCode || !username) return
@@ -68,7 +65,7 @@ export default function GameScreen() {
       } else if (msg.type === 'quiz_ready') {
         setQuizReady(true)
       } else if (msg.type === 'error') {
-        if (msg.message === "Username already taken" || msg.message ==="Don't use naughty words 😾😾, pick a better name") {
+        if (msg.message === "Username already taken" || msg.message === "Don't use naughty words 😾😾, pick a better name") {
           setJoinError(msg.message)
         } else {
           console.error(msg.message)
@@ -76,7 +73,6 @@ export default function GameScreen() {
       } else if (msg.type === 'session_started') {
         setSessionStarted(true)
       } else if (msg.type === 'question') {
-        // New question: reset phase and clear previous states
         setDisplayPhase("answer")
         setGeneratedImage(null)
         setQuestionData(msg.data)
@@ -95,11 +91,8 @@ export default function GameScreen() {
       } else if (msg.type === 'game_over') {
         setGameOver(true)
       } else if (msg.type === 'question_result') {
-        // When the answer phase is over, the server sends the correct answer.
         setCorrectAnswer(msg.data.correct_answer)
-        // First, switch to showing the leaderboard...
         setDisplayPhase("leaderboard")
-        // ...and after 5 seconds, switch to the explanation view.
         setTimeout(() => {
           setDisplayPhase("explanation")
         }, 5000)
@@ -121,7 +114,7 @@ export default function GameScreen() {
     return () => socket.close()
   }, [roomCode, username])
 
-  // Only run the answer-phase timer when in answer phase
+  // Timer
   useEffect(() => {
     if (sessionStarted && questionData && !gameOver && displayPhase === "answer") {
       setTimeLeft(TIME_LIMIT)
@@ -137,6 +130,18 @@ export default function GameScreen() {
       return () => clearInterval(timer)
     }
   }, [sessionStarted, questionData, gameOver, displayPhase])
+
+  // Music logic
+  useEffect(() => {
+    if (audioRef.current) {
+      if (sessionStarted && !gameOver) {
+        audioRef.current.play().catch(err => console.log(err))
+      } else {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+    }
+  }, [sessionStarted, gameOver])
 
   const handleUsernameSubmit = () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement
@@ -163,6 +168,8 @@ export default function GameScreen() {
 
   return (
     <div className="game-screen">
+      <audio ref={audioRef} src="/music.mp3" loop />
+
       <p className="app-game-title">QuizzR</p>
       {roomCode && <p className="room-code">Room Code: {roomCode}</p>}
 
@@ -200,22 +207,29 @@ export default function GameScreen() {
           <div className="scoreboard-container">
             <h3>Final Scoreboard</h3>
             <div className="podium-container">
-            {sortedScoreboard.slice(0, 3).map(([uname, score], index) => (
-              <div key={uname} className={`podium podium-${index + 1}`}>
-                <p className="podium-rank">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</p>
-                <p className="podium-user">{uname} {uname === username ? "(YOU)" : ""}</p>
-                <p className="podium-score">{score} pts</p>
-              </div>
-            ))}
+              {sortedScoreboard.slice(0, 3).map(([uname, score], index) => (
+                <div key={uname} className={`podium podium-${index + 1}`}>
+                  <p className="podium-rank">
+                    {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                  </p>
+                  <p className="podium-user">
+                    {uname} {uname === username ? "(YOU)" : ""}
+                  </p>
+                  <p className="podium-score">{score} pts</p>
+                </div>
+              ))}
+            </div>
+            <ul>
+              {sortedScoreboard.slice(3).map(([uname, score]) => (
+                <li key={uname}>
+                  {uname} {uname === username ? "(YOU)" : ""}: {score}
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul>
-            {sortedScoreboard.slice(3).map(([uname, score]) => (
-              <li key={uname}>
-                {uname} {uname === username ? "(YOU)" : ""}: {score}
-              </li>
-            ))}
-          </ul>
-          </div>
+          <CustomButton style={{ fontSize: '1.5rem', marginTop: '1rem' }} onClick={() => navigate('/')}>
+            Exit
+          </CustomButton>
         </div>
       ) : (
         <div className="trivia-container">
@@ -263,7 +277,6 @@ export default function GameScreen() {
           )}
 
           {displayPhase === "leaderboard" && (
-            // During this phase, show the leaderboard popup
             <LeaderboardPopup scoreboard={scoreboard} />
           )}
 
@@ -273,11 +286,12 @@ export default function GameScreen() {
                 <div className="explanation-label">Explanation</div>
                 {generatedImage && (
                   <div className="generated-image-container">
-                    <img src={generatedImage}
-                        alt="Visualization"
-                        className="generated-image"
-                        onError={() => setGeneratedImage(null) }
-                        />
+                    <img
+                      src={generatedImage}
+                      alt="Visualization"
+                      className="generated-image"
+                      onError={() => setGeneratedImage(null)}
+                    />
                   </div>
                 )}
               </div>
