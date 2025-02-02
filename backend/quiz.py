@@ -103,17 +103,13 @@ async def question_scheduler():
                     "data": {
                         "question": question["question"],
                         "options": options
+
                     }
                 })
                 await manager.broadcast(session_code, payload)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    task = asyncio.create_task(question_scheduler())
-    yield
-    task.cancel()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"],  allow_methods=["*"], allow_headers=["*"])
 
