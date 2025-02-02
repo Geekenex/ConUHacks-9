@@ -17,7 +17,6 @@ export default function CreateRoomScreen() {
   const [searchResults, setSearchResults] = useState<Dataset[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
   const navigate = useNavigate()
-  const user = 'user' + Math.floor(Math.random() * 1000)
 
   const handleCreateRoom = async () => {
     if (!selectedDataset) return
