@@ -49,6 +49,43 @@ manager = ConnectionManager()
 def generate_session_code(length: int = 6) -> str:
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
+# Add this new function to handle per-session scheduling:
+async def run_session(session_code: str):
+    session = sessions[session_code]
+    # Shuffle questions so each is asked exactly once
+    session["remaining_questions"] = random.sample(session["questions"], len(session["questions"]))
+    while session["remaining_questions"]:
+        # Get and remove the next question
+        question = session["remaining_questions"].pop(0)
+        session["current_question_answers"] = {}
+        session["current_question"] = question
+        session["current_question_timestamp"] = time.time()
+        options = question["fake_answers"] + [question["correct_answer"]]
+        random.shuffle(options)
+        payload = json.dumps({
+            "type": "question",
+            "data": {
+                "question": question["question"],
+                "options": options
+            }
+        })
+        await manager.broadcast(session_code, payload)
+        await asyncio.sleep(15)
+        await manager.broadcast(session_code, json.dumps({
+            "type": "question_result",
+            "data": {
+                "correct_answer": question["correct_answer"],
+                "scores": session["current_question_answers"]
+            }
+        }))
+        await asyncio.sleep(5)
+    # All questions have been asked; notify clients that the game is over.
+    payload = json.dumps({
+        "type": "game_over",
+        "data": {}
+    })
+    await manager.broadcast(session_code, payload)
+
 async def question_scheduler():
     while True:
         await asyncio.sleep(20)
@@ -66,19 +103,15 @@ async def question_scheduler():
                     "data": {
                         "question": question["question"],
                         "options": options
+
                     }
                 })
                 await manager.broadcast(session_code, payload)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    task = asyncio.create_task(question_scheduler())
-    yield
-    task.cancel()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"],  allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/datasets")
 async def search_datasets(query: str = ""):
@@ -87,7 +120,7 @@ async def search_datasets(query: str = ""):
     if query:
         datasets = api.dataset_list(search=query, page=1, max_size=10_000_000, file_type='csv')
     else:
-        datasets = api.dataset_list(sort_by='hottest', page=1, max_size=10_000_000, file_type='csv')
+        datasets = api.dataset_list(sort_by='votes', page=1, max_size=10_000_000, file_type='csv')
     results = []
     for ds in datasets:
         dataset_url = f"https://www.kaggle.com/datasets/{ds.ref}"
@@ -123,6 +156,8 @@ async def search_datasets(query: str = ""):
 async def start_session(request: Request):
     data = await request.json()
     dataset_url = data.get("dataset_url")
+    questions_num = data.get("questions_num")
+    print(questions_num)
     if not dataset_url or not isinstance(dataset_url, str):
         raise HTTPException(status_code=400, detail="dataset_url must be a non-empty string")
     # Extract dataset reference from dataset_url (e.g., "https://www.kaggle.com/datasets/shivamb/netflix-shows" -> "shivamb/netflix-shows")
@@ -152,7 +187,7 @@ async def start_session(request: Request):
                     csv_content = f.read()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to download dataset via Kaggle API: {str(e)}")
-    questions = generateQA(csv_content, 10)
+    questions = generateQA(csv_content, questions_num)
     session_code = generate_session_code()
     sessions[session_code] = {
         "questions": questions,
@@ -175,29 +210,24 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
             data = await websocket.receive_json()
             action = data.get("action")
             session = sessions.get(session_code)
-            if action == "start":
+            if action == "join":
+                user = data.get("user")
+                if user:
+                    if user not in session["responses"]:
+                        session["responses"][user] = 0
+                    scoreboard_payload = json.dumps({
+                        "type": "scoreboard",
+                        "data": session["responses"]
+                    })
+                    await manager.broadcast(session_code, scoreboard_payload)
+            elif action == "start":
                 if not session.get("started"):
                     session["started"] = True
-                    # Notify all clients that session has started
                     await manager.broadcast(session_code, json.dumps({
                         "type": "session_started",
                         "data": {}
                     }))
-                    # Immediately send a question
-                    session["current_question_answers"] = {}
-                    question = random.choice(session["questions"])
-                    session["current_question"] = question
-                    session["current_question_timestamp"] = time.time()
-                    options = question["fake_answers"] + [question["correct_answer"]]
-                    random.shuffle(options)
-                    payload = json.dumps({
-                        "type": "question",
-                        "data": {
-                            "question": question["question"],
-                            "options": options
-                        }
-                    })
-                    await manager.broadcast(session_code, payload)
+                    asyncio.create_task(run_session(session_code))
             elif action == "answer":
                 user = data.get("user")
                 answer = data.get("answer")
@@ -232,3 +262,4 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
                     await manager.broadcast(session_code, scoreboard_payload)
     except WebSocketDisconnect:
         manager.disconnect(session_code, websocket)
+
