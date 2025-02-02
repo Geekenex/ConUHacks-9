@@ -5,12 +5,44 @@ import CustomInput from '../components/CustomInput'
 import './HomeScreen.css'
 
 export default function HomeScreen() {
-  const navigate = useNavigate()
-  const [roomCode, setRoomCode] = useState('')
+  const navigate = useNavigate();
+  const [roomCode, setRoomCode] = useState('');
 
-  const handleJoinRoom = () => {
-    console.log('Joining room:', roomCode)
-    navigate(`/game/${roomCode}`)
+  const [error, setError] = useState(false);
+  const [errorId, setErrorId] = useState(0);
+
+  const testRoomExists = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://localhost:8000/ws/${roomCode}`)
+
+      ws.onopen = () => {
+        ws.close()
+        resolve()
+      }
+
+      ws.onclose = (event) => {
+        if (event.code === 1008 || event.code === 403) {
+          reject(new Error('Room not found'))
+        } else {
+          resolve()
+        }
+      }
+
+      ws.onerror = () => {
+        reject(new Error('Could not connect'))
+      }
+    })
+  }
+
+  const handleJoinRoom = async () => {
+    try {
+      await testRoomExists()
+      setError(false)
+      navigate(`/game/${roomCode}`)
+    } catch (err) {
+      setError(true)
+      setErrorId(Date.now())
+    }
   }
 
   return (
@@ -47,6 +79,14 @@ export default function HomeScreen() {
           onChange={(e) => setRoomCode(e.target.value)}
         />
         <CustomButton onClick={handleJoinRoom}>Join</CustomButton>
+        {error && (
+          <div
+            key={errorId}
+            className="error-message shake"
+          >
+            Room not found
+          </div>
+        )}
       </div>
       <div className="section">
         <h2>Create a room</h2>
