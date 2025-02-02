@@ -32,6 +32,7 @@ export default function GameScreen() {
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [username, setUsername] = useState<string>("")
   const [usernameSubmitted, setUsernameSubmitted] = useState<boolean>(false)
+  const [gameOver, setGameOver] = useState<boolean>(false)
   const TIME_LIMIT = 18
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export default function GameScreen() {
         setSessionStarted(true)
       } else if (msg.type === 'question') {
         setQuestionData(msg.data)
-        setTimeLeft(TIME_LIMIT)
+        setTimeLeft(msg.data.timeLimit || TIME_LIMIT)
         setHasAnswered(false)
         setCurrentQuestionScore(null)
       } else if (msg.type === 'result') {
@@ -60,6 +61,8 @@ export default function GameScreen() {
         if (msg.data) {
           setScoreboard(msg.data)
         }
+      } else if (msg.type === 'game_over') {
+        setGameOver(true)
       } else if (msg.type === 'error') {
         console.error(msg.message)
       }
@@ -70,8 +73,8 @@ export default function GameScreen() {
   }, [roomCode, username])
 
   useEffect(() => {
-    if (sessionStarted && questionData) {
-      setTimeLeft(TIME_LIMIT)
+    if (sessionStarted && questionData && !gameOver) {
+      setTimeLeft(questionData.timeLimit || TIME_LIMIT)
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -83,7 +86,7 @@ export default function GameScreen() {
       }, 1000)
       return () => clearInterval(timer)
     }
-  }, [sessionStarted, questionData])
+  }, [sessionStarted, questionData, gameOver])
 
   const sendAnswer = (answer: string) => {
     if (ws && connected && !hasAnswered) {
@@ -111,13 +114,39 @@ export default function GameScreen() {
             onChange={e => setUsername(e.target.value)}
             placeholder="Username"
           />
-          <CustomButton onClick={() => {
-            if(username.trim() !== "") {
-              setUsernameSubmitted(true)
-            }
-          }}>
+          <CustomButton
+            onClick={() => {
+              if (username.trim() !== "") {
+                setUsernameSubmitted(true)
+              }
+            }}
+          >
             Submit
           </CustomButton>
+        </div>
+      </div>
+    )
+  }
+
+  if (gameOver) {
+    return (
+      <div className="game-screen">
+        <p className="app-game-title">QuizzR - Game Over</p>
+        <div className="trivia-container">
+          <h2>Game Over</h2>
+          <div style={{ marginTop: '20px' }}>
+            <h3>Final Scoreboard</h3>
+            <ul>
+              {sortedScoreboard.map(([uname, score]) => (
+                <li key={uname}>
+                  {uname}: {score}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div style={{ marginTop: '20px' }}>
+            <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
+          </div>
         </div>
       </div>
     )
@@ -154,7 +183,7 @@ export default function GameScreen() {
               questionData.options.map((opt, index) => (
                 <div
                   key={index}
-                  className={`answer-card ${hasAnswered ? '' : ''}`}
+                  className="answer-card"
                   onClick={() => sendAnswer(opt)}
                 >
                   {opt}

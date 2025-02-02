@@ -49,6 +49,35 @@ manager = ConnectionManager()
 def generate_session_code(length: int = 6) -> str:
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
+# Add this new function to handle per-session scheduling:
+async def run_session(session_code: str):
+    session = sessions[session_code]
+    # Shuffle questions so each is asked exactly once
+    session["remaining_questions"] = random.sample(session["questions"], len(session["questions"]))
+    while session["remaining_questions"]:
+        # Get and remove the next question
+        question = session["remaining_questions"].pop(0)
+        session["current_question_answers"] = {}
+        session["current_question"] = question
+        session["current_question_timestamp"] = time.time()
+        options = question["fake_answers"] + [question["correct_answer"]]
+        random.shuffle(options)
+        payload = json.dumps({
+            "type": "question",
+            "data": {
+                "question": question["question"],
+                "options": options
+            }
+        })
+        await manager.broadcast(session_code, payload)
+        await asyncio.sleep(20)
+    # All questions have been asked; notify clients that the game is over.
+    payload = json.dumps({
+        "type": "game_over",
+        "data": {}
+    })
+    await manager.broadcast(session_code, payload)
+
 async def question_scheduler():
     while True:
         await asyncio.sleep(20)
@@ -124,6 +153,7 @@ async def start_session(request: Request):
     data = await request.json()
     dataset_url = data.get("dataset_url")
     questions_num = data.get("questions_num")
+    print(questions_num)
     if not dataset_url or not isinstance(dataset_url, str):
         raise HTTPException(status_code=400, detail="dataset_url must be a non-empty string")
     # Extract dataset reference from dataset_url (e.g., "https://www.kaggle.com/datasets/shivamb/netflix-shows" -> "shivamb/netflix-shows")
@@ -193,20 +223,7 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
                         "type": "session_started",
                         "data": {}
                     }))
-                    session["current_question_answers"] = {}
-                    question = random.choice(session["questions"])
-                    session["current_question"] = question
-                    session["current_question_timestamp"] = time.time()
-                    options = question["fake_answers"] + [question["correct_answer"]]
-                    random.shuffle(options)
-                    payload = json.dumps({
-                        "type": "question",
-                        "data": {
-                            "question": question["question"],
-                            "options": options
-                        }
-                    })
-                    await manager.broadcast(session_code, payload)
+                    asyncio.create_task(run_session(session_code))
             elif action == "answer":
                 user = data.get("user")
                 answer = data.get("answer")
