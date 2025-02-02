@@ -73,7 +73,7 @@ export default function GameScreen() {
       } else if (msg.type === 'quiz_ready') {
         setQuizReady(true)
       } else if (msg.type === 'error') {
-        if (msg.message === "Username already taken") {
+        if (msg.message === "Username already taken" || msg.message ==="Don't use naughty words 😾😾, pick a better name") {
           setJoinError(msg.message)
         } else {
           console.error(msg.message)
