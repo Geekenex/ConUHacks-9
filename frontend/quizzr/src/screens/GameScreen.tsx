@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import CustomButton from '../components/CustomButton'
+import Leaderboard from '../components/Leaderboard'
 import './GameScreen.css'
 
 interface QuestionData {
   question: string
   options: string[]
-  timeLimit: number
+  correctAnswer: string
 }
 
 interface Scoreboard {
@@ -26,13 +27,22 @@ export default function GameScreen() {
   const [sessionStarted, setSessionStarted] = useState<boolean>(false)
   const [questionData, setQuestionData] = useState<QuestionData | null>(null)
   const [hasAnswered, setHasAnswered] = useState<boolean>(false)
-  const [currentQuestionScore, setCurrentQuestionScore] = useState<number | null>(null)
   const [totalScore, setTotalScore] = useState<number>(0)
   const [scoreboard, setScoreboard] = useState<Scoreboard>({})
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [username, setUsername] = useState<string>("")
   const [usernameSubmitted, setUsernameSubmitted] = useState<boolean>(false)
-  const TIME_LIMIT = 18
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
+  const [questionResult, setQuestionResult] = useState<number | null>(null)
+
+
+  const TIME_LIMIT = 20
+  const ANSWER_PHASE = 15
+
+  const revealPhase = timeLeft <= (TIME_LIMIT - ANSWER_PHASE);
+
+  const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0);
+
 
   useEffect(() => {
     if (!roomCode || !username) return
@@ -49,10 +59,11 @@ export default function GameScreen() {
         setQuestionData(msg.data)
         setTimeLeft(TIME_LIMIT)
         setHasAnswered(false)
-        setCurrentQuestionScore(null)
+        setSelectedAnswer(null)
+        setQuestionResult(null)
       } else if (msg.type === 'result') {
         if (msg.data) {
-          setCurrentQuestionScore(msg.data.result)
+          setQuestionResult(msg.data.result)
           setTotalScore(msg.data.total)
           setHasAnswered(true)
         }
@@ -64,6 +75,8 @@ export default function GameScreen() {
         console.error(msg.message)
       }
     }
+    
+    
     socket.onclose = () => setConnected(false)
     setWs(socket)
     return () => socket.close()
@@ -86,7 +99,9 @@ export default function GameScreen() {
   }, [sessionStarted, questionData])
 
   const sendAnswer = (answer: string) => {
-    if (ws && connected && !hasAnswered) {
+    if (ws && connected && !hasAnswered && timeLeft > (TIME_LIMIT - ANSWER_PHASE)) {
+      setSelectedAnswer(answer)
+      setHasAnswered(true)
       ws.send(JSON.stringify({ action: 'answer', user: username, answer }))
     }
   }
@@ -96,8 +111,6 @@ export default function GameScreen() {
       ws.send(JSON.stringify({ action: 'start', user: username }))
     }
   }
-
-  const sortedScoreboard = Object.entries(scoreboard).sort((a, b) => b[1] - a[1])
 
   if (!usernameSubmitted) {
     return (
@@ -112,7 +125,7 @@ export default function GameScreen() {
             placeholder="Username"
           />
           <CustomButton onClick={() => {
-            if(username.trim() !== "") {
+            if (username.trim() !== "") {
               setUsernameSubmitted(true)
             }
           }}>
@@ -140,44 +153,48 @@ export default function GameScreen() {
             <div
               className="time-progress"
               style={{
-                width: `${(timeLeft / (questionData?.timeLimit || TIME_LIMIT)) * 100}%`
+                width: `${(answerTimeLeft / ANSWER_PHASE) * 100}%`
               }}
             ></div>
           </div>
-          <div className="question-section">
-            <h2 className="question-text">
-              {questionData ? questionData.question : 'Waiting for question...'}
-            </h2>
-          </div>
-          <div className="answers-section">
-            {questionData &&
-              questionData.options.map((opt, index) => (
-                <div
-                  key={index}
-                  className={`answer-card ${hasAnswered ? '' : ''}`}
-                  onClick={() => sendAnswer(opt)}
-                >
-                  {opt}
-                </div>
-              ))}
-          </div>
-          <div style={{ marginTop: '20px' }}>
-            <h3>Scoreboard</h3>
-            <ul>
-              {sortedScoreboard.map(([uname, score]) => (
-                <li key={uname}>
-                  {uname}: {score}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div style={{ marginTop: '20px' }}>
-            <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
-          </div>
-          {currentQuestionScore !== null && (
-            <div style={{ marginTop: '10px' }}>
-              <strong>Current Question Score:</strong> {currentQuestionScore}
-            </div>
+          {questionData && (
+            <>
+              <div className="question-section">
+                <h2 className="question-text">{questionData.question}</h2>
+              </div>
+              <div className="answers-section">
+                {questionData &&
+                  questionData.options.map((opt, index) => {
+                    let cardClass = "answer-card"
+                    if (selectedAnswer === opt) {
+                      if (hasAnswered && revealPhase) {
+                        cardClass += (questionResult !== null && questionResult > 0) ? " correct" : " wrong"
+                      } else {
+                        cardClass += " selected"
+                      }
+                    }
+                    return (
+                      <div
+                        key={index}
+                        className={cardClass}
+                        onClick={() => {
+                          if (!hasAnswered && !revealPhase) {
+                            sendAnswer(opt)
+                          }
+                        }}
+                      >
+                        {opt}
+                      </div>
+                    )
+                  })}
+              </div>
+
+
+
+              {timeLeft <= (TIME_LIMIT - ANSWER_PHASE) && (
+                <Leaderboard scoreboard={scoreboard} />
+              )}
+            </>
           )}
         </div>
       )}

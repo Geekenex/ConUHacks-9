@@ -125,3 +125,15 @@
   color: #fff;
   border-color: #f19728;
 }
+
+.answer-card.correct {
+  background-color: green;
+  color: #fff;
+  border-color: darkgreen;
+}
+
+.answer-card.wrong {
+  background-color: red;
+  color: #fff;
+  border-color: darkred;
+}
