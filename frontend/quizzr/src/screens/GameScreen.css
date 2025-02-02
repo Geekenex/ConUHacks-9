@@ -139,3 +139,20 @@
   color: #fff;
   border-color: darkred;
 }
+
+.generated-image-container {
+  max-height: 25%;
+  width: 100%;
+  margin-bottom: 1em;
+  border: 2px solid #ccc; /* This creates a frame effect */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* Ensures the image does not overflow the frame */
+}
+
+.generated-image {
+  max-height: 100%;
+  width: auto;
+  object-fit: contain;
+}
