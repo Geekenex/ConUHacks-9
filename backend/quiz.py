@@ -199,7 +199,6 @@ async def start_session(request: Request):
     }
     return {"session_code": session_code}
 
-# In the websocket endpoint, update the "join" action as follows:
 @app.websocket("/ws/{session_code}")
 async def websocket_endpoint(websocket: WebSocket, session_code: str):
     if session_code not in sessions:
@@ -216,14 +215,16 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
                 if user:
                     if "users" not in session:
                         session["users"] = []
-                    if user not in session["users"]:
+                    if user in session["users"]:
+                        await websocket.send_json({"type": "error", "message": "Username already taken"})
+                    else:
                         session["users"].append(user)
-
-                    user_list_payload = json.dumps({
-                        "type": "user_list",
-                        "data": session["users"]
-                    })
-                    await manager.broadcast(session_code, user_list_payload)
+                        await websocket.send_json({"type": "join_success"})
+                        user_list_payload = json.dumps({
+                            "type": "user_list",
+                            "data": session["users"]
+                        })
+                        await manager.broadcast(session_code, user_list_payload)
             elif action == "start":
                 if not session.get("started"):
                     session["started"] = True
@@ -266,4 +267,3 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
                     await manager.broadcast(session_code, scoreboard_payload)
     except WebSocketDisconnect:
         manager.disconnect(session_code, websocket)
-

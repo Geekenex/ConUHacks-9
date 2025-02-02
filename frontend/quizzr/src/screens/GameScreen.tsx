@@ -37,6 +37,7 @@ export default function GameScreen() {
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [userList, setUserList] = useState<string[]>([])
   const [showLeaderboardPopup, setShowLeaderboardPopup] = useState<boolean>(false)
+  const [joinError, setJoinError] = useState<string>("")
 
   const TIME_LIMIT = 20
   const ANSWER_PHASE = 15
@@ -44,7 +45,7 @@ export default function GameScreen() {
   const revealPhase = timeLeft <= (TIME_LIMIT - ANSWER_PHASE)
   const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0)
 
-  //Delay the scoreboard popup by 1s
+  // Delay the scoreboard popup by 1s
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
     if (revealPhase) {
@@ -55,7 +56,6 @@ export default function GameScreen() {
     return () => clearTimeout(timer)
   }, [revealPhase])
   
-
   useEffect(() => {
     if (!roomCode || !username) return
     const socket = new WebSocket(`${window.location.href.includes("localhost")?"ws://localhost:8000":"wss://conuhacks-9.up.railway.app"}/ws/${roomCode}`)
@@ -65,7 +65,16 @@ export default function GameScreen() {
     }
     socket.onmessage = (event: MessageEvent) => {
       const msg: MessageData = JSON.parse(event.data)
-      if (msg.type === 'session_started') {
+      if (msg.type === 'join_success') {
+        setUsernameSubmitted(true)
+        setJoinError("")
+      } else if (msg.type === 'error') {
+        if (msg.message === "Username already taken") {
+          setJoinError(msg.message)
+        } else {
+          console.error(msg.message)
+        }
+      } else if (msg.type === 'session_started') {
         setSessionStarted(true)
       } else if (msg.type === 'question') {
         setQuestionData(msg.data)
@@ -90,8 +99,6 @@ export default function GameScreen() {
         if (msg.data) {
           setUserList(msg.data)
         }
-      } else if (msg.type === 'error') {
-        console.error(msg.message)
       }
     }
     socket.onclose = () => setConnected(false)
@@ -119,7 +126,7 @@ export default function GameScreen() {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement
     if (input.value) {
       setUsername(input.value)
-      setUsernameSubmitted(true)
+      // Wait for server confirmation (join_success) before advancing
     }
   }
 
@@ -154,6 +161,7 @@ export default function GameScreen() {
             maxLength={20}
           />
           <CustomButton onClick={handleUsernameSubmit}>Submit</CustomButton>
+          {joinError && <div className="error-message shake">{joinError}</div>}
         </div>
       ) : !sessionStarted ? (
         <div className="trivia-container">
