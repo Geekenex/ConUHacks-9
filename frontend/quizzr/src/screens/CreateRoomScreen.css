@@ -151,9 +151,21 @@
 
 .dataset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1.5rem;
   margin-top: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+@media (min-width: 801) {
+  .dataset-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .dataset-grid .dataset-card:nth-child(9) {
+    display: none;
+  }
 }
 
 .dataset-card {
@@ -199,7 +211,4 @@
     height: 60px;
   }
 
-  .dataset-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  }
 }
