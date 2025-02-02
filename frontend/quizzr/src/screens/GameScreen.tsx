@@ -25,6 +25,7 @@ export default function GameScreen() {
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connected, setConnected] = useState<boolean>(false)
   const [sessionStarted, setSessionStarted] = useState<boolean>(false)
+  const [quizReady, setQuizReady] = useState<boolean>(false)
   const [questionData, setQuestionData] = useState<QuestionData | null>(null)
   const [hasAnswered, setHasAnswered] = useState<boolean>(false)
   const [totalScore, setTotalScore] = useState<number>(0)
@@ -45,7 +46,6 @@ export default function GameScreen() {
   const revealPhase = timeLeft <= (TIME_LIMIT - ANSWER_PHASE)
   const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0)
 
-  // Delay the scoreboard popup by 1s
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
     if (revealPhase) {
@@ -68,6 +68,8 @@ export default function GameScreen() {
       if (msg.type === 'join_success') {
         setUsernameSubmitted(true)
         setJoinError("")
+      } else if (msg.type === 'quiz_ready') {
+        setQuizReady(true)
       } else if (msg.type === 'error') {
         if (msg.message === "Username already taken") {
           setJoinError(msg.message)
@@ -126,7 +128,6 @@ export default function GameScreen() {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement
     if (input.value) {
       setUsername(input.value)
-      // Wait for server confirmation (join_success) before advancing
     }
   }
 
@@ -166,6 +167,7 @@ export default function GameScreen() {
       ) : !sessionStarted ? (
         <div className="trivia-container">
           <h2>Waiting for session to start...</h2>
+          {!quizReady && <p>Creating quiz...</p>}
           {userList.length > 0 && (
             <div className="user-list">
               <p>Users in Lobby</p>
@@ -176,7 +178,7 @@ export default function GameScreen() {
               </ul>
             </div>
           )}
-          <CustomButton onClick={startSession}>Everybody's In</CustomButton>
+          {quizReady && <CustomButton onClick={startSession}>Everybody's In</CustomButton>}
         </div>
       ) : gameOver ? (
         <div className="trivia-container">
