@@ -108,7 +108,12 @@ export default function GameScreen() {
           setUserList(msg.data)
         }
       } else if (msg.type === 'generated_image') {
-        setGeneratedImage(msg.data.base64)
+        if (msg.data && msg.data.base64) {
+          setGeneratedImage(msg.data.base64)
+        } else {
+          console.error('Invalid generated_image message data:', msg.data)
+          setGeneratedImage(null)
+        }
       }
     }
     socket.onclose = () => setConnected(false)
