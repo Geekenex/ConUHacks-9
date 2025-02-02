@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import CustomButton from '../components/CustomButton'
-import Leaderboard from '../components/Leaderboard'
+import LeaderboardPopup from '../components/LeaderboardPopup'
 import './GameScreen.css'
 
 interface QuestionData {
@@ -36,12 +36,24 @@ export default function GameScreen() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [userList, setUserList] = useState<string[]>([])
+  const [showLeaderboardPopup, setShowLeaderboardPopup] = useState<boolean>(false)
 
   const TIME_LIMIT = 20
   const ANSWER_PHASE = 15
 
   const revealPhase = timeLeft <= (TIME_LIMIT - ANSWER_PHASE)
   const answerTimeLeft = Math.max(timeLeft - (TIME_LIMIT - ANSWER_PHASE), 0)
+
+  //Delay the scoreboard popup by 1s
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (revealPhase) {
+      timer = setTimeout(() => setShowLeaderboardPopup(true), 1000)
+    } else {
+      setShowLeaderboardPopup(false)
+    }
+    return () => clearTimeout(timer)
+  }, [revealPhase])
 
   useEffect(() => {
     if (!roomCode || !username) return
@@ -90,7 +102,7 @@ export default function GameScreen() {
     if (sessionStarted && questionData && !gameOver) {
       setTimeLeft(TIME_LIMIT)
       const timer = setInterval(() => {
-        setTimeLeft(prev => {
+        setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer)
             return 0
@@ -140,9 +152,7 @@ export default function GameScreen() {
             placeholder="Username"
             maxLength={20}
           />
-          <CustomButton onClick={handleUsernameSubmit}>
-            Submit
-          </CustomButton>
+          <CustomButton onClick={handleUsernameSubmit}>Submit</CustomButton>
         </div>
       ) : !sessionStarted ? (
         <div className="trivia-container">
@@ -151,7 +161,9 @@ export default function GameScreen() {
             <div className="user-list">
               <p>Users in Lobby</p>
               <ul>
-                {userList.map(user => <li key={user}>{user}</li>)}
+                {userList.map((user) => (
+                  <li key={user}>{user}</li>
+                ))}
               </ul>
             </div>
           )}
@@ -164,7 +176,9 @@ export default function GameScreen() {
             <h3>Final Scoreboard</h3>
             <ul>
               {sortedScoreboard.map(([uname, score]) => (
-                <li key={uname}>{uname}: {score}</li>
+                <li key={uname}>
+                  {uname}: {score}
+                </li>
               ))}
             </ul>
           </div>
@@ -178,7 +192,12 @@ export default function GameScreen() {
             <p>Trivia Game</p>
           </header>
           <div className="timer-bar">
-            <div className="time-progress" style={{ width: `${(answerTimeLeft / ANSWER_PHASE) * 100}%` }}></div>
+            <div
+              className="time-progress"
+              style={{
+                width: `${(answerTimeLeft / ANSWER_PHASE) * 100}%`,
+              }}
+            ></div>
           </div>
           {questionData && (
             <>
@@ -200,21 +219,27 @@ export default function GameScreen() {
                     }
                   }
                   return (
-                    <div key={index} className={cardClass} onClick={() => {
-                      if (!hasAnswered && !revealPhase) sendAnswer(opt)
-                    }}>
+                    <div
+                      key={index}
+                      className={cardClass}
+                      onClick={() => {
+                        if (!hasAnswered && !revealPhase) sendAnswer(opt)
+                      }}
+                    >
                       {opt}
                     </div>
                   )
                 })}
               </div>
-              {timeLeft <= (TIME_LIMIT - ANSWER_PHASE) && (
-                <Leaderboard scoreboard={scoreboard} />
-              )}
             </>
           )}
+
+          {revealPhase && showLeaderboardPopup && (
+            <LeaderboardPopup scoreboard={scoreboard} />
+          )}
+
           <div style={{ marginTop: '20px' }}>
-            <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
+            <strong>Your Name:</strong> {username}
           </div>
         </div>
       )}
