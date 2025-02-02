@@ -21,7 +21,7 @@ export default function CreateRoomScreen() {
   const handleCreateRoom = async () => {
     if (!selectedDataset) return
     try {
-      const response = await fetch(`${window.location.href.includes("localhost")?"http://localhost:8000":"https://conuhacks-9-production.up.railway.app"}/start_session`, {
+      const response = await fetch(`${window.location.href.includes("localhost")?"http://localhost:8000":"https://conuhacks-9.up.railway.app"}/start_session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -42,7 +42,7 @@ export default function CreateRoomScreen() {
   const handleSearchDatasets = async () => {
     try {
       const response = await fetch(
-        `${window.location.href.includes("localhost")?"http://localhost:8000":"https://conuhacks-9-production.up.railway.app"}/datasets?query=${encodeURIComponent(datasetQuery)}`
+        `${window.location.href.includes("localhost")?"http://localhost:8000":"https://conuhacks-9.up.railway.app"}/datasets?query=${encodeURIComponent(datasetQuery)}`
       )
       if (!response.ok) {
         throw new Error('Network response was not ok')
