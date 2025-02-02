@@ -194,7 +194,7 @@ export default function GameScreen() {
       ) : gameOver ? (
         <div className="trivia-container">
           <h2>Game Over</h2>
-          <div style={{ marginTop: '20px' }}>
+          <div className="scoreboard-container">
             <h3>Final Scoreboard</h3>
             <ul>
               {sortedScoreboard.map(([uname, score]) => (
@@ -204,7 +204,7 @@ export default function GameScreen() {
               ))}
             </ul>
           </div>
-          <div style={{ marginTop: '20px' }}>
+          <div className="user-score">
             <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
           </div>
         </div>
@@ -288,7 +288,7 @@ export default function GameScreen() {
             </>
           )}
 
-          <div style={{ marginTop: '20px' }}>
+          <div className="user-info">
             <strong>Your Name:</strong> {username}
           </div>
         </div>
