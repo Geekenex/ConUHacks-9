@@ -11,6 +11,7 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from bs4 import BeautifulSoup
 from contextlib import asynccontextmanager
 from generateQA import generateQA
+from better_profanity import profanity
 
 # In-memory session storage:
 # sessions[session_code] = {
@@ -22,6 +23,8 @@ from generateQA import generateQA
 #   "started": boolean
 # }
 sessions: Dict[str, Dict[str, Any]] = {}
+
+
 
 class ConnectionManager:
     def __init__(self):
@@ -215,6 +218,7 @@ async def generate_quiz_background(session_code: str, ds_ref: str, questions_num
 
 @app.websocket("/ws/{session_code}")
 async def websocket_endpoint(websocket: WebSocket, session_code: str):
+    profanity.load_censor_words()
     if session_code not in sessions:
         await websocket.close(code=1008)
         return
@@ -226,6 +230,14 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
             session = sessions.get(session_code)
             if action == "join":
                 user = data.get("user")
+
+                if not user or profanity.contains_profanity(user):
+                    await websocket.send_json({
+                        "type": 'bad_username',
+                        "message": "Don't use naughty words 😾😾, pick a better name"
+                    })
+                    continue
+                
                 if user:
                     if "users" not in session:
                         session["users"] = []
