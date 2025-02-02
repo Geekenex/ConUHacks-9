@@ -7,7 +7,7 @@ import './GameScreen.css'
 interface QuestionData {
   question: string
   options: string[]
-  correctAnswer: string
+  correctAnswer?: string
 }
 
 interface Scoreboard {
@@ -35,6 +35,7 @@ export default function GameScreen() {
   const [gameOver, setGameOver] = useState<boolean>(false)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
+  const [userList, setUserList] = useState<string[]>([])
 
   const TIME_LIMIT = 20
   const ANSWER_PHASE = 15
@@ -58,6 +59,7 @@ export default function GameScreen() {
         setTimeLeft(TIME_LIMIT)
         setHasAnswered(false)
         setSelectedAnswer(null)
+        setCorrectAnswer(null)
       } else if (msg.type === 'result') {
         if (msg.data) {
           setTotalScore(msg.data.total)
@@ -69,16 +71,16 @@ export default function GameScreen() {
         }
       } else if (msg.type === 'game_over') {
         setGameOver(true)
-      }
-      else if (msg.type === 'question_result') {
+      } else if (msg.type === 'question_result') {
         setCorrectAnswer(msg.data.correct_answer)
-      } 
-      else if (msg.type === 'error') {
+      } else if (msg.type === 'user_list') {
+        if (msg.data) {
+          setUserList(msg.data)
+        }
+      } else if (msg.type === 'error') {
         console.error(msg.message)
-      } 
-      
+      }
     }
-    
     socket.onclose = () => setConnected(false)
     setWs(socket)
     return () => socket.close()
@@ -114,10 +116,12 @@ export default function GameScreen() {
     }
   }
 
-  if (!usernameSubmitted) {
-    return (
-      <div className="game-screen">
-        <p className="app-game-title">QuizzR</p>
+  const sortedScoreboard = Object.entries(scoreboard).sort(([, a], [, b]) => b - a)
+
+  return (
+    <div className="game-screen">
+      <p className="app-game-title">QuizzR</p>
+      {!usernameSubmitted ? (
         <div className="trivia-container">
           <h2>Enter your username</h2>
           <input
@@ -126,35 +130,35 @@ export default function GameScreen() {
             onChange={e => setUsername(e.target.value)}
             placeholder="Username"
           />
-          <CustomButton
-            onClick={() => {
-              if (username.trim() !== "") {
-                setUsernameSubmitted(true)
-              }
-            }}
-          >
+          <CustomButton onClick={() => {
+            if(username.trim() !== "") {
+              setUsernameSubmitted(true)
+            }
+          }}>
             Submit
           </CustomButton>
         </div>
-      </div>
-    )
-  }
-
-  const sortedScoreboard = Object.entries(scoreboard).sort(([, a], [, b]) => b - a)
-
-  if (gameOver) {
-    return (
-      <div className="game-screen">
-        <p className="app-game-title">QuizzR - Game Over</p>
+      ) : !sessionStarted ? (
+        <div className="trivia-container">
+          <h2>Waiting for session to start...</h2>
+          {userList.length > 0 && (
+            <div className="user-list">
+              <h3>Users in Lobby:</h3>
+              <ul>
+                {userList.map(user => <li key={user}>{user}</li>)}
+              </ul>
+            </div>
+          )}
+          <CustomButton onClick={startSession}>Everybody's In</CustomButton>
+        </div>
+      ) : gameOver ? (
         <div className="trivia-container">
           <h2>Game Over</h2>
           <div style={{ marginTop: '20px' }}>
             <h3>Final Scoreboard</h3>
             <ul>
               {sortedScoreboard.map(([uname, score]) => (
-                <li key={uname}>
-                  {uname}: {score}
-                </li>
+                <li key={uname}>{uname}: {score}</li>
               ))}
             </ul>
           </div>
@@ -162,30 +166,13 @@ export default function GameScreen() {
             <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
           </div>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="game-screen">
-      <p className="app-game-title">QuizzR</p>
-      {!sessionStarted ? (
-        <div className="trivia-container">
-          <h2>Waiting for session to start...</h2>
-          <CustomButton onClick={startSession}>Everybody's In</CustomButton>
-        </div>
       ) : (
         <div className="trivia-container">
           <header className="app-header">
             <p>Trivia Game</p>
           </header>
           <div className="timer-bar">
-            <div
-              className="time-progress"
-              style={{
-                width: `${(answerTimeLeft / ANSWER_PHASE) * 100}%`
-              }}
-            ></div>
+            <div className="time-progress" style={{ width: `${(answerTimeLeft / ANSWER_PHASE) * 100}%` }}></div>
           </div>
           {questionData && (
             <>
@@ -193,41 +180,36 @@ export default function GameScreen() {
                 <h2 className="question-text">{questionData.question}</h2>
               </div>
               <div className="answers-section">
-              {questionData.options.map((opt, index) => {
-                let cardClass = 'answer-card'
-              
-                if (revealPhase) {
-                  if (opt === correctAnswer) {
-                    cardClass += ' correct' // correct = green
-                  } else if (selectedAnswer === opt) {
-                    cardClass += ' wrong'  // wrong = red
+                {questionData.options.map((opt, index) => {
+                  let cardClass = 'answer-card'
+                  if (revealPhase) {
+                    if (opt === correctAnswer) {
+                      cardClass += ' correct'
+                    } else if (selectedAnswer === opt) {
+                      cardClass += ' wrong'
+                    }
+                  } else {
+                    if (selectedAnswer === opt) {
+                      cardClass += ' selected'
+                    }
                   }
-                } else {
-                  if (selectedAnswer === opt) {
-                    cardClass += ' selected'
-                  }
-                }
-              
-                return (
-                  <div
-                    key={index}
-                    className={cardClass}
-                    onClick={() => {
-                      if (!hasAnswered && !revealPhase) {
-                        sendAnswer(opt)
-                      }
-                    }}
-                  >
-                    {opt}
-                  </div>
-                )
-              })}
-            </div>
+                  return (
+                    <div key={index} className={cardClass} onClick={() => {
+                      if (!hasAnswered && !revealPhase) sendAnswer(opt)
+                    }}>
+                      {opt}
+                    </div>
+                  )
+                })}
+              </div>
               {timeLeft <= (TIME_LIMIT - ANSWER_PHASE) && (
                 <Leaderboard scoreboard={scoreboard} />
               )}
             </>
           )}
+          <div style={{ marginTop: '20px' }}>
+            <strong>Your User:</strong> {username} | <strong>Total Score:</strong> {totalScore}
+          </div>
         </div>
       )}
     </div>

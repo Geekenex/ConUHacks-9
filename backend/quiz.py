@@ -178,7 +178,6 @@ async def start_session(request: Request):
             if not csv_files:
                 raise Exception("No CSV file found in dataset")
             csv_file = csv_files[0]
-            # Try reading with utf-8-sig and fallback to latin-1 if decoding fails
             try:
                 with open(csv_file, "r", encoding="utf-8-sig") as f:
                     csv_content = f.read()
@@ -195,10 +194,12 @@ async def start_session(request: Request):
         "current_question_timestamp": None,
         "responses": {},
         "current_question_answers": {},
-        "started": False
+        "started": False,
+        "users": []
     }
     return {"session_code": session_code}
 
+# In the websocket endpoint, update the "join" action as follows:
 @app.websocket("/ws/{session_code}")
 async def websocket_endpoint(websocket: WebSocket, session_code: str):
     if session_code not in sessions:
@@ -213,13 +214,16 @@ async def websocket_endpoint(websocket: WebSocket, session_code: str):
             if action == "join":
                 user = data.get("user")
                 if user:
-                    if user not in session["responses"]:
-                        session["responses"][user] = 0
-                    scoreboard_payload = json.dumps({
-                        "type": "scoreboard",
-                        "data": session["responses"]
+                    if "users" not in session:
+                        session["users"] = []
+                    if user not in session["users"]:
+                        session["users"].append(user)
+
+                    user_list_payload = json.dumps({
+                        "type": "user_list",
+                        "data": session["users"]
                     })
-                    await manager.broadcast(session_code, scoreboard_payload)
+                    await manager.broadcast(session_code, user_list_payload)
             elif action == "start":
                 if not session.get("started"):
                     session["started"] = True
