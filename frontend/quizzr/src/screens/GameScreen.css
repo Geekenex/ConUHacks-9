@@ -162,11 +162,11 @@
   max-height: 25%;
   width: 100%;
   margin-bottom: 1em;
-  border: 2px solid #ccc; /* This creates a frame effect */
+  border: 2px solid #ccc;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow: hidden; /* Ensures the image does not overflow the frame */
+  overflow: hidden;
 }
 
 .generated-image {
@@ -280,7 +280,7 @@
 .explanation-section {
   display: flex;
   flex-direction: column;
-  align-items: center; /* center content horizontally */
+  align-items: center;
   width: 100%;
   margin: 0;
   padding: 0;
@@ -289,14 +289,14 @@
 .explanation-label {
   text-align: center;
   font-size: 1.2em;
-  margin: 0 0 0.5em 0; /* no extra top margin, small bottom margin */
+  margin: 0 0 0.5em 0; 
   font-weight: bold;
 }
 
 .generated-image-container {
-  max-height: 25vh; /* use viewport height units rather than % */
+  max-height: 25vh;
   width: 100%;
-  border: 2px solid #ccc; /* frame effect */
+  border: 2px solid #ccc;
   display: flex;
   justify-content: center;
   align-items: center;
