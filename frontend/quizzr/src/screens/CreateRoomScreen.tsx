@@ -16,6 +16,7 @@ export default function CreateRoomScreen() {
   const [modalOpen, setModalOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Dataset[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate()
 
   const handleCreateRoom = async () => {
@@ -36,10 +37,11 @@ export default function CreateRoomScreen() {
       navigate(`/game/${data.session_code}`)
     } catch (error) {
       console.error('Error starting session:', error)
-    }
+    } 
   }
 
   const handleSearchDatasets = async () => {
+    setIsSearching(true)
     try {
       const response = await fetch(
         `${window.location.href.includes("localhost")?"http://localhost:8000":"https://conuhacks-9.up.railway.app"}/datasets?query=${encodeURIComponent(datasetQuery)}`
@@ -52,6 +54,8 @@ export default function CreateRoomScreen() {
       setModalOpen(true)
     } catch (error) {
       console.error('Error fetching datasets:', error)
+    } finally{
+      setIsSearching(false)
     }
   }
 
@@ -110,12 +114,15 @@ export default function CreateRoomScreen() {
               value={datasetQuery}
               onChange={(e) => setDatasetQuery(e.target.value)}
             />
-            <CustomButton onClick={handleSearchDatasets}>Search</CustomButton>
-          </div>
+            <CustomButton onClick={handleSearchDatasets} disabled={isSearching}>
+              {isSearching ? 'Searching...' : 'Search'}
+            </CustomButton>         
+             </div>
         )}
         <div className="button-group">
-          <CustomButton onClick={handleCreateRoom}>Create Room</CustomButton>
-          <CustomButton onClick={() => window.history.back()}>Back</CustomButton>
+        <CustomButton onClick={handleCreateRoom}>Creating Room
+        </CustomButton>
+        <CustomButton onClick={() => window.history.back()}>Back</CustomButton>
         </div>
       </div>
 
